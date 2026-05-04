@@ -10,11 +10,10 @@ const Landing = () => {
             MongoDB NoSQL Demo
           </div>
 <h2>Login Feature Branch</h2>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-          Illegal Dumping Tracker - Main Branch Version
-            <span className="block text-blue-300">Complaint Tracker</span>
-          </h1>
-
+         <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+  Illegal Dumping Complaint Tracker - Resolved Version
+  <span className="block text-blue-300">Complaint Tracker</span>
+</h1>
           <p className="text-xl text-blue-200 mb-10 max-w-2xl mx-auto">
             A focused MongoDB application demonstrating embedded documents, arrays,
             and aggregation pipelines for managing municipal complaints.
