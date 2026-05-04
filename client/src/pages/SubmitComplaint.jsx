@@ -20,7 +20,6 @@ function LocationPicker({ position, setPosition }) {
       setPosition(e.latlng);
     }
   });
-
   return position ? <Marker position={position} icon={customIcon} /> : null;
 }
 
@@ -29,11 +28,10 @@ const SubmitComplaint = () => {
     title: '',
     description: '',
     category: 'Illegal Dumping',
-    address: '',
+    areaName: '',
     priority: 'medium'
   });
-  const [image, setImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imageUrl, setImageUrl] = useState('');
   const [position, setPosition] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -44,14 +42,6 @@ const SubmitComplaint = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -66,25 +56,30 @@ const SubmitComplaint = () => {
     setLoading(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('address', formData.address);
-      formDataToSend.append('priority', formData.priority);
-      formDataToSend.append('latitude', position.lat);
-      formDataToSend.append('longitude', position.lng);
-      if (image) {
-        formDataToSend.append('image', image);
+      const complaintData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        location: {
+          areaName: formData.areaName,
+          coordinates: {
+            latitude: position.lat,
+            longitude: position.lng
+          }
+        }
+      };
+
+      // Add image if URL provided
+      if (imageUrl.trim()) {
+        complaintData.images = [{ url: imageUrl.trim(), uploadedAt: new Date() }];
       }
 
-      await api.post('/complaints', formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/complaints', complaintData);
 
       setSuccess(true);
       setTimeout(() => {
-        navigate('/my-complaints');
+        navigate('/complaints');
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit complaint');
@@ -108,10 +103,10 @@ const SubmitComplaint = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="page-header">
-        <h1 className="page-title">Submit a Complaint</h1>
-        <p className="page-subtitle">Report an issue in your community</p>
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-800">Submit Complaint</h1>
+        <p className="text-slate-600">Report an illegal dumping or other municipal issue</p>
       </div>
 
       {success && (
@@ -119,7 +114,7 @@ const SubmitComplaint = () => {
           <span className="text-2xl">✅</span>
           <div>
             <div className="font-semibold">Complaint submitted successfully!</div>
-            <div className="text-sm text-green-600">Redirecting to your complaints...</div>
+            <div className="text-sm text-green-600">Redirecting to complaints list...</div>
           </div>
         </div>
       )}
@@ -131,156 +126,127 @@ const SubmitComplaint = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="card p-6">
-        <div className="form-group">
-          <label className="form-label">Title</label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className="input"
-            placeholder="Brief title for the complaint"
-            required
-          />
-        </div>
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Title *</label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Brief title for the complaint"
+              required
+            />
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Category</label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="input"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Category *</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Description</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows={4}
-            className="input"
-            placeholder="Describe the issue in detail..."
-            required
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Priority</label>
+            <select
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Address / Area</label>
-          <input
-            type="text"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            className="input"
-            placeholder="Street address or area description"
-          />
-        </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Description *</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={4}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
+              placeholder="Describe the issue in detail..."
+              required
+            />
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Priority</label>
-          <select
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            className="input"
-          >
-            <option value="low">Low - Minor issue</option>
-            <option value="medium">Medium - Needs attention</option>
-            <option value="high">High - Urgent</option>
-          </select>
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Area / Neighborhood</label>
+            <input
+              type="text"
+              name="areaName"
+              value={formData.areaName}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., Downtown, West Side"
+            />
+          </div>
 
-        <div className="form-group">
-          <label className="form-label">Image (optional)</label>
-          <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="max-h-48 mx-auto rounded-lg"
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Image URL (optional)</label>
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"
+              placeholder="https://example.com/image.jpg"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-slate-700">Location on Map *</label>
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              >
+                📍 Use My Location
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-3">Click on the map to set the complaint location</p>
+            <div className="h-72 rounded-lg overflow-hidden border border-slate-300">
+              <MapContainer
+                center={position || [40.7128, -74.006]}
+                zoom={13}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <button
-                  type="button"
-                  onClick={() => { setImage(null); setImagePreview(null); }}
-                  className="absolute top-2 right-2 bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="text-4xl">📷</div>
-                <div className="text-slate-600">
-                  <label className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium">
-                    Click to upload an image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <div className="text-sm text-slate-400">PNG, JPG, GIF up to 10MB</div>
-              </div>
+                <LocationPicker position={position} setPosition={setPosition} />
+              </MapContainer>
+            </div>
+            {position && (
+              <p className="text-sm text-slate-600 mt-2 flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                Selected: {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
+              </p>
             )}
           </div>
-        </div>
-
-        <div className="form-group">
-          <div className="flex justify-between items-center mb-2">
-            <label className="form-label mb-0">Location</label>
-            <button
-              type="button"
-              onClick={getCurrentLocation}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Use My Current Location
-            </button>
-          </div>
-          <p className="text-sm text-slate-500 mb-3">Click on the map to pin the location of the issue</p>
-          <div className="h-72 rounded-lg overflow-hidden border border-slate-200">
-            <MapContainer
-              center={position || [40.7128, -74.006]}
-              zoom={13}
-              style={{ height: '100%', width: '100%' }}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <LocationPicker position={position} setPosition={setPosition} />
-            </MapContainer>
-          </div>
-          {position && (
-            <p className="text-sm text-slate-600 mt-2 flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              Selected: {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
-            </p>
-          )}
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full btn btn-primary py-4 text-lg flex items-center justify-center gap-2"
+          className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
-              <div className="spinner w-5 h-5"></div>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Submitting...
             </>
           ) : (

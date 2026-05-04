@@ -6,9 +6,8 @@ const path = require('path');
 
 dotenv.config();
 
-const authRoutes = require('./routes/auth');
 const complaintRoutes = require('./routes/complaints');
-const analyticsRoutes = require('./routes/analytics');
+const reportsRoutes = require('./routes/reports');
 
 const app = express();
 
@@ -16,14 +15,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use('/api/auth', authRoutes);
+// API Routes
 app.use('/api/complaints', complaintRoutes);
-app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Municipal Complaint API is running' });
+  res.json({ status: 'ok', message: 'Illegal Dumping Complaint Tracker API is running' });
 });
 
 app.use((err, req, res, next) => {
@@ -37,7 +34,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/municipal_complaints')
   .then(() => {
     console.log('MongoDB connected successfully');
     app.listen(PORT, () => {

@@ -1,22 +1,25 @@
 const Complaint = require('../models/Complaint');
 
+// Create a new complaint
 exports.createComplaint = async (req, res) => {
   try {
-    const { title, description, category, latitude, longitude, address, priority } = req.body;
+    const { title, description, category, priority, location, assignedTeam } = req.body;
 
     const complaint = await Complaint.create({
       title,
       description,
       category,
-      latitude,
-      longitude,
-      address,
       priority: priority || 'medium',
-      reportedBy: req.user.id,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : null
+      status: 'pending',
+      location: {
+        areaName: location?.areaName || '',
+        coordinates: {
+          latitude: location?.coordinates?.latitude,
+          longitude: location?.coordinates?.longitude
+        }
+      },
+      assignedTeam: assignedTeam || { name: '', members: [] }
     });
-
-    await complaint.populate('reportedBy', 'fullName email');
 
     res.status(201).json({
       success: true,
@@ -31,26 +34,12 @@ exports.createComplaint = async (req, res) => {
   }
 };
 
+// Get all complaints with optional filters
 exports.getComplaints = async (req, res) => {
   try {
-    const {
-      category,
-      status,
-      priority,
-      startDate,
-      endDate,
-      search,
-      page = 1,
-      limit = 10,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
+    const { category, status, priority, search } = req.query;
 
     const query = {};
-
-    if (req.user.role !== 'admin') {
-      query.reportedBy = req.user.id;
-    }
 
     if (category) query.category = category;
     if (status) query.status = status;
@@ -60,39 +49,16 @@ exports.getComplaints = async (req, res) => {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { address: { $regex: search, $options: 'i' } }
+        { 'location.areaName': { $regex: search, $options: 'i' } }
       ];
     }
 
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
-
-    const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-    const skip = (page - 1) * limit;
-
     const complaints = await Complaint.find(query)
-      .populate('reportedBy', 'fullName email')
-      .populate('assignedTo', 'fullName email')
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await Complaint.countDocuments(query);
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      complaints,
-      pagination: {
-        total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit),
-        limit: parseInt(limit)
-      }
+      complaints
     });
   } catch (error) {
     console.error('Get complaints error:', error);
@@ -103,23 +69,15 @@ exports.getComplaints = async (req, res) => {
   }
 };
 
+// Get single complaint by ID
 exports.getComplaintById = async (req, res) => {
   try {
-    const complaint = await Complaint.findById(req.params.id)
-      .populate('reportedBy', 'fullName email')
-      .populate('assignedTo', 'fullName email');
+    const complaint = await Complaint.findById(req.params.id);
 
     if (!complaint) {
       return res.status(404).json({
         success: false,
         message: 'Complaint not found'
-      });
-    }
-
-    if (req.user.role !== 'admin' && complaint.reportedBy._id.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this complaint'
       });
     }
 
@@ -135,9 +93,10 @@ exports.getComplaintById = async (req, res) => {
   }
 };
 
-exports.updateComplaintStatus = async (req, res) => {
+// Update complaint (status, priority, assignedTeam, etc.)
+exports.updateComplaint = async (req, res) => {
   try {
-    const { status, priority, assignedTo } = req.body;
+    const { status, priority, location, assignedTeam } = req.body;
 
     const complaint = await Complaint.findById(req.params.id);
 
@@ -148,24 +107,26 @@ exports.updateComplaintStatus = async (req, res) => {
       });
     }
 
-    const oldStatus = complaint.status;
-    
     if (status) complaint.status = status;
     if (priority) complaint.priority = priority;
-    if (assignedTo !== undefined) complaint.assignedTo = assignedTo;
+    if (location) {
+      if (location.areaName !== undefined) complaint.location.areaName = location.areaName;
+      if (location.coordinates) {
+        if (location.coordinates.latitude) complaint.location.coordinates.latitude = location.coordinates.latitude;
+        if (location.coordinates.longitude) complaint.location.coordinates.longitude = location.coordinates.longitude;
+      }
+    }
+    if (assignedTeam) {
+      if (assignedTeam.name !== undefined) complaint.assignedTeam.name = assignedTeam.name;
+      if (assignedTeam.members) complaint.assignedTeam.members = assignedTeam.members;
+    }
 
     await complaint.save();
 
-    const updatedComplaint = await Complaint.findById(req.params.id)
-      .populate('reportedBy', 'fullName email')
-      .populate('assignedTo', 'fullName email');
-
     res.json({
       success: true,
-      complaint: updatedComplaint,
-      message: updatedComplaint.status !== oldStatus ? 
-        `Complaint status updated to ${updatedComplaint.status}` : 
-        'Complaint updated successfully'
+      complaint,
+      message: 'Complaint updated successfully'
     });
   } catch (error) {
     console.error('Update complaint error:', error);
@@ -176,6 +137,90 @@ exports.updateComplaintStatus = async (req, res) => {
   }
 };
 
+// Add an update to the updates array
+exports.addUpdate = async (req, res) => {
+  try {
+    const { status, comment } = req.body;
+
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message: 'Complaint not found'
+      });
+    }
+
+    complaint.updates.unshift({
+      status: status || complaint.status,
+      comment: comment || '',
+      updatedAt: new Date()
+    });
+
+    // Update the main status if provided
+    if (status) {
+      complaint.status = status;
+    }
+
+    await complaint.save();
+
+    res.json({
+      success: true,
+      complaint,
+      message: 'Update added successfully'
+    });
+  } catch (error) {
+    console.error('Add update error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Add an image to the images array
+exports.addImage = async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image URL is required'
+      });
+    }
+
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message: 'Complaint not found'
+      });
+    }
+
+    complaint.images.unshift({
+      url,
+      uploadedAt: new Date()
+    });
+
+    await complaint.save();
+
+    res.json({
+      success: true,
+      complaint,
+      message: 'Image added successfully'
+    });
+  } catch (error) {
+    console.error('Add image error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Delete complaint
 exports.deleteComplaint = async (req, res) => {
   try {
     const complaint = await Complaint.findById(req.params.id);
@@ -187,61 +232,11 @@ exports.deleteComplaint = async (req, res) => {
       });
     }
 
-    if (req.user.role !== 'admin' && complaint.reportedBy.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this complaint'
-      });
-    }
-
     await complaint.deleteOne();
 
     res.json({
       success: true,
       message: 'Complaint deleted successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-exports.getMyComplaints = async (req, res) => {
-  try {
-    const { status, category, priority } = req.query;
-    
-    const query = { reportedBy: req.user.id };
-    
-    if (status) query.status = status;
-    if (category) query.category = category;
-    if (priority) query.priority = priority;
-
-    const complaints = await Complaint.find(query)
-      .populate('reportedBy', 'fullName email')
-      .sort({ createdAt: -1 });
-
-    res.json({
-      success: true,
-      complaints,
-      total: complaints.length
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-exports.getStats = async (req, res) => {
-  try {
-    const stats = await Complaint.getStats();
-    
-    res.json({
-      success: true,
-      ...stats
     });
   } catch (error) {
     res.status(500).json({

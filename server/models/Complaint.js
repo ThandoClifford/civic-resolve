@@ -19,27 +19,6 @@ const complaintSchema = new mongoose.Schema({
     enum: ['Illegal Dumping', 'Water Leak', 'Road Damage', 'Electricity Fault', 'Other'],
     index: true
   },
-  imageUrl: {
-    type: String,
-    default: null
-  },
-  latitude: {
-    type: Number,
-    required: [true, 'Latitude is required'],
-    min: -90,
-    max: 90
-  },
-  longitude: {
-    type: Number,
-    required: [true, 'Longitude is required'],
-    min: -180,
-    max: 180
-  },
-  address: {
-    type: String,
-    trim: true,
-    index: true
-  },
   priority: {
     type: String,
     enum: ['low', 'medium', 'high'],
@@ -52,18 +31,61 @@ const complaintSchema = new mongoose.Schema({
     default: 'pending',
     index: true
   },
-  reportedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
+  location: {
+    areaName: {
+      type: String,
+      trim: true,
+      index: true
+    },
+    coordinates: {
+      latitude: {
+        type: Number,
+        required: true,
+        min: -90,
+        max: 90
+      },
+      longitude: {
+        type: Number,
+        required: true,
+        min: -180,
+        max: 180
+      }
+    }
   },
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null,
-    index: true
+  assignedTeam: {
+    name: {
+      type: String,
+      trim: true
+    },
+    members: [{
+      type: String,
+      trim: true
+    }]
   },
+  images: [{
+    url: {
+      type: String,
+      required: true
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  updates: [{
+    status: {
+      type: String,
+      enum: ['pending', 'under_review', 'in_progress', 'resolved']
+    },
+    comment: {
+      type: String,
+      trim: true
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
@@ -72,49 +94,39 @@ const complaintSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  },
-  resolvedAt: {
-    type: Date,
-    default: null
   }
 });
 
-complaintSchema.index({ title: 'text', description: 'text', address: 'text' });
+// Compound index for geospatial queries
+complaintSchema.index({ 'location.coordinates': '2dsphere' });
 
-complaintSchema.index({ latitude: 1, longitude: 1 });
+// Text search index
+complaintSchema.index({ title: 'text', description: 'text', 'location.areaName': 'text' });
 
+// Pre-save hook
 complaintSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
-  if (this.status === 'resolved' && !this.resolvedAt) {
-    this.resolvedAt = Date.now();
-  }
   next();
 });
 
-complaintSchema.methods.getDuration = function () {
-  if (this.resolvedAt && this.createdAt) {
-    return Math.round((this.resolvedAt - this.createdAt) / (1000 * 60 * 60 * 24));
-  }
-  return null;
-};
-
+// Statistic aggregation method
 complaintSchema.statics.getStats = async function () {
   const total = await this.countDocuments();
   const resolved = await this.countDocuments({ status: 'resolved' });
   const unresolved = await this.countDocuments({ status: { $ne: 'resolved' } });
-  
+
   const byCategory = await this.aggregate([
     { $group: { _id: '$category', count: { $sum: 1 } } }
   ]);
-  
+
   const byStatus = await this.aggregate([
     { $group: { _id: '$status', count: { $sum: 1 } } }
   ]);
-  
+
   const byPriority = await this.aggregate([
     { $group: { _id: '$priority', count: { $sum: 1 } } }
   ]);
-  
+
   return {
     total,
     resolved,

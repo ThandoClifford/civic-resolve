@@ -1,7 +1,7 @@
 {
   "name": "municipal-complaint-server",
   "version": "1.0.0",
-  "description": "Backend API for Smart Public Complaints and Municipal Issue Management System",
+  "description": "Backend API for Illegal Dumping Complaint Tracker (DICT411)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -9,12 +9,9 @@
     "seed": "node seed.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.3",
-    "multer": "^1.4.5-lts.1"
+    "mongoose": "^8.0.3"
   }
 }

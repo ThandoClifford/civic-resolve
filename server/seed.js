@@ -1,163 +1,528 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const User = require('./models/User');
 const Complaint = require('./models/Complaint');
 
 dotenv.config();
 
 const seedData = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/municipal_complaints');
     console.log('MongoDB connected');
 
-    await User.deleteMany({});
     await Complaint.deleteMany({});
-    console.log('Cleared existing data');
-
-    const admin = await User.create({
-      fullName: 'Admin User',
-      email: 'admin@municipal.gov',
-      password: 'admin123',
-      role: 'admin'
-    });
-    console.log('Admin user created:', admin.email);
-
-    const citizen1 = await User.create({
-      fullName: 'John Citizen',
-      email: 'john@example.com',
-      password: 'user123',
-      role: 'citizen'
-    });
-
-    const citizen2 = await User.create({
-      fullName: 'Jane Citizen',
-      email: 'jane@example.com',
-      password: 'user123',
-      role: 'citizen'
-    });
-    console.log('Citizen users created');
+    console.log('Cleared existing complaints');
 
     const complaints = [
+      // Complaint 1 - High priority with multiple updates and images
       {
         title: 'Illegal dumping behind grocery store',
-        description: 'Large pile of trash and construction debris dumped behind the local grocery store on Main Street.',
+        description: 'Large pile of trash and construction debris dumped behind the local grocery store on Main Street. Need immediate cleanup.',
         category: 'Illegal Dumping',
-        latitude: 40.7128,
-        longitude: -74.006,
-        address: '123 Main St',
         priority: 'high',
-        status: 'pending',
-        reportedBy: citizen1._id
+        status: 'in_progress',
+        location: {
+          areaName: 'Downtown District',
+          coordinates: {
+            latitude: 40.7128,
+            longitude: -74.006
+          }
+        },
+        assignedTeam: {
+          name: 'Sanitation Unit A',
+          members: ['John D.', 'Maria S.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/dumping1.jpg',
+            uploadedAt: new Date('2025-04-15')
+          },
+          {
+            url: 'https://example.com/images/dumping2.jpg',
+            uploadedAt: new Date('2025-04-15')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Initial report received',
+            updatedAt: new Date('2025-04-15T09:00:00')
+          },
+          {
+            status: 'under_review',
+            comment: 'Dispatch team assigned for investigation',
+            updatedAt: new Date('2025-04-15T10:30:00')
+          },
+          {
+            status: 'in_progress',
+            comment: 'Cleanup crew dispatched to location',
+            updatedAt: new Date('2025-04-15T14:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-15T08:30:00'),
+        updatedAt: new Date('2025-04-15T14:00:00')
       },
+
+      // Complaint 2 - Medium priority with one update
       {
         title: 'Illegal dumping in alleyway',
         description: 'Furniture and household items dumped in the alley between 5th and 6th Avenue.',
         category: 'Illegal Dumping',
-        latitude: 40.7150,
-        longitude: -74.010,
-        address: 'Alley between 5th and 6th Ave',
         priority: 'medium',
         status: 'under_review',
-        reportedBy: citizen2._id
+        location: {
+          areaName: 'West Side',
+          coordinates: {
+            latitude: 40.7150,
+            longitude: -74.010
+          }
+        },
+        assignedTeam: {
+          name: 'Sanitation Unit B',
+          members: ['Carlos M.', 'Linda P.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/alley1.jpg',
+            uploadedAt: new Date('2025-04-20')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Report submitted via mobile app',
+            updatedAt: new Date('2025-04-20T11:00:00')
+          },
+          {
+            status: 'under_review',
+            comment: 'Team dispatched to assess situation',
+            updatedAt: new Date('2025-04-20T13:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-20T10:45:00'),
+        updatedAt: new Date('2025-04-20T13:00:00')
       },
+
+      // Complaint 3 - Water leak, high priority
       {
-        title: 'Water leak on corner',
-        description: 'Water leaking from a broken pipe on the corner of Oak and Elm streets.',
+        title: 'Water leak on corner causing flooding',
+        description: 'Water leaking from a broken pipe on the corner of Oak and Elm streets. Water is flooding the sidewalk.',
         category: 'Water Leak',
-        latitude: 40.7200,
-        longitude: -74.015,
-        address: 'Oak and Elm St',
         priority: 'high',
         status: 'in_progress',
-        reportedBy: citizen1._id
+        location: {
+          areaName: 'Oakland Neighborhood',
+          coordinates: {
+            latitude: 40.7200,
+            longitude: -74.015
+          }
+        },
+        assignedTeam: {
+          name: 'Water & Sewer Dept',
+          members: ['Mike W.', 'Sarah K.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/leak1.jpg',
+            uploadedAt: new Date('2025-04-18')
+          },
+          {
+            url: 'https://example.com/images/leak2.jpg',
+            uploadedAt: new Date('2025-04-18')
+          },
+          {
+            url: 'https://example.com/images/leak3.jpg',
+            uploadedAt: new Date('2025-04-18')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Citizen reported major water leak',
+            updatedAt: new Date('2025-04-18T07:00:00')
+          },
+          {
+            status: 'in_progress',
+            comment: 'Emergency repair team en route',
+            updatedAt: new Date('2025-04-18T07:45:00')
+          }
+        ],
+        createdAt: new Date('2025-04-18T06:55:00'),
+        updatedAt: new Date('2025-04-18T07:45:00')
       },
+
+      // Complaint 4 - Road damage, medium
       {
-        title: 'Pothole on highway',
-        description: 'Large pothole causing damage to vehicles on the highway exit ramp.',
+        title: 'Large pothole on highway exit',
+        description: 'Large pothole causing damage to vehicles on the highway exit ramp. Multiple complaints received.',
         category: 'Road Damage',
-        latitude: 40.7080,
-        longitude: -74.020,
-        address: 'Highway 95 Exit 12',
         priority: 'medium',
         status: 'pending',
-        reportedBy: citizen2._id
+        location: {
+          areaName: 'Highway 95 Corridor',
+          coordinates: {
+            latitude: 40.7080,
+            longitude: -74.020
+          }
+        },
+        assignedTeam: {
+          name: 'Road Maintenance',
+          members: ['Tom B.', 'Rachel G.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/pothole1.jpg',
+            uploadedAt: new Date('2025-04-22')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Multiple reports filed about this pothole',
+            updatedAt: new Date('2025-04-22T16:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-22T15:50:00'),
+        updatedAt: new Date('2025-04-22T16:00:00')
       },
+
+      // Complaint 5 - Electricity fault, low priority, resolved
       {
-        title: 'Street light out',
-        description: 'Street light not working in residential area causing safety concerns.',
+        title: 'Street light out in residential area',
+        description: 'Street light not working in residential area causing safety concerns for pedestrians.',
         category: 'Electricity Fault',
-        latitude: 40.7100,
-        longitude: -74.008,
-        address: '456 Pine St',
         priority: 'low',
         status: 'resolved',
-        reportedBy: citizen1._id
+        location: {
+          areaName: 'Pine Street Residential',
+          coordinates: {
+            latitude: 40.7100,
+            longitude: -74.008
+          }
+        },
+        assignedTeam: {
+          name: 'Electric Utilities',
+          members: ['David L.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/streetlight1.jpg',
+            uploadedAt: new Date('2025-04-10')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Report received about malfunctioning streetlight',
+            updatedAt: new Date('2025-04-10T20:00:00')
+          },
+          {
+            status: 'under_review',
+            comment: 'Electrician assigned to investigate',
+            updatedAt: new Date('2025-04-11T08:00:00')
+          },
+          {
+            status: 'in_progress',
+            comment: 'Bulb replaced, light functioning again',
+            updatedAt: new Date('2025-04-11T12:00:00')
+          },
+          {
+            status: 'resolved',
+            comment: 'Issue confirmed resolved',
+            updatedAt: new Date('2025-04-11T14:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-10T19:55:00'),
+        updatedAt: new Date('2025-04-11T14:00:00')
       },
+
+      // Complaint 6 - Another illegal dumping
       {
-        title: 'Multiple illegal dumping reports',
-        description: 'Several bags of garbage dumped near the park entrance.',
+        title: 'Multiple illegal dumping reports near park',
+        description: 'Several bags of garbage dumped near the park entrance. Looks like household waste.',
         category: 'Illegal Dumping',
-        latitude: 40.7130,
-        longitude: -74.007,
-        address: 'Central Park Entrance',
         priority: 'medium',
         status: 'pending',
-        reportedBy: citizen2._id
+        location: {
+          areaName: 'Central Park Entrance',
+          coordinates: {
+            latitude: 40.7130,
+            longitude: -74.007
+          }
+        },
+        assignedTeam: {
+          name: '',
+          members: []
+        },
+        images: [],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Initial report logged',
+            updatedAt: new Date('2025-04-25T10:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-25T09:45:00'),
+        updatedAt: new Date('2025-04-25T10:00:00')
       },
+
+      // Complaint 7 - Illegal dumping riverside
       {
-        title: 'More illegal dumping',
-        description: 'Old appliances dumped near the river bank.',
+        title: 'Old appliances dumped near river bank',
+        description: 'Discarded washing machines and refrigerators dumped near the river bank. Environmental hazard.',
         category: 'Illegal Dumping',
-        latitude: 40.7135,
-        longitude: -74.005,
-        address: 'River Bank Road',
         priority: 'high',
         status: 'pending',
-        reportedBy: citizen1._id
+        location: {
+          areaName: 'Riverside Industrial',
+          coordinates: {
+            latitude: 40.7135,
+            longitude: -74.005
+          }
+        },
+        assignedTeam: {
+          name: 'Environmental Task Force',
+          members: ['Alex R.', 'Jordan T.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/appliances1.jpg',
+            uploadedAt: new Date('2025-04-26')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Reported by concerned citizen during walk',
+            updatedAt: new Date('2025-04-26T08:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-26T07:50:00'),
+        updatedAt: new Date('2025-04-26T08:00:00')
       },
+
+      // Complaint 8 - Illegal dumping empty lot
       {
-        title: 'Another dumping spot',
-        description: 'Construction debris dumped in empty lot.',
+        title: 'Construction debris in empty lot',
+        description: 'Empty lot on 8th Street being used for illegal dumping of construction materials.',
         category: 'Illegal Dumping',
-        latitude: 40.7125,
-        longitude: -74.008,
-        address: 'Empty Lot on 8th St',
         priority: 'medium',
         status: 'pending',
-        reportedBy: citizen2._id
+        location: {
+          areaName: '8th Street Corridor',
+          coordinates: {
+            latitude: 40.7125,
+            longitude: -74.008
+          }
+        },
+        assignedTeam: {
+          name: '',
+          members: []
+        },
+        images: [],
+        updates: [],
+        createdAt: new Date('2025-04-27T11:00:00'),
+        updatedAt: new Date('2025-04-27T11:00:00')
       },
+
+      // Complaint 9 - Illegal dumping near school
       {
-        title: 'Dumping near school',
-        description: 'Trash dumped near the elementary school playground.',
+        title: 'Dumping near elementary school playground',
+        description: 'Trash dumped dangerously close to elementary school playground. Health risk for children.',
         category: 'Illegal Dumping',
-        latitude: 40.7140,
-        longitude: -74.004,
-        address: 'Elementary School',
         priority: 'high',
         status: 'under_review',
-        reportedBy: citizen1._id
+        location: {
+          areaName: 'School District',
+          coordinates: {
+            latitude: 40.7140,
+            longitude: -74.004
+          }
+        },
+        assignedTeam: {
+          name: 'Crisis Response',
+          members: ['Officer Miller', 'Clean Team 5']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/school1.jpg',
+            uploadedAt: new Date('2025-04-28')
+          },
+          {
+            url: 'https://example.com/images/school2.jpg',
+            uploadedAt: new Date('2025-04-28')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Urgent report from school staff',
+            updatedAt: new Date('2025-04-28T07:30:00')
+          },
+          {
+            status: 'under_review',
+            comment: 'Escalated to priority response team',
+            updatedAt: new Date('2025-04-28T08:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-28T07:25:00'),
+        updatedAt: new Date('2025-04-28T08:00:00')
       },
+
+      // Complaint 10 - Water Leak, resolved
       {
-        title: 'More dumping reports',
-        description: 'Household waste dumped in the woods.',
-        category: 'Illegal Dumping',
-        latitude: 40.7145,
-        longitude: -74.003,
-        address: 'Woods Area',
+        title: 'Sewage leak in residential area',
+        description: 'Sewage pipe burst causing contamination in neighborhood. Health hazard.',
+        category: 'Water Leak',
+        priority: 'high',
+        status: 'resolved',
+        location: {
+          areaName: 'North Heights',
+          coordinates: {
+            latitude: 40.7180,
+            longitude: -74.012
+          }
+        },
+        assignedTeam: {
+          name: 'Emergency Sewer Crew',
+          members: ['Robert F.', 'Emergency Unit']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/sewer1.jpg',
+            uploadedAt: new Date('2025-04-05')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Emergency call received',
+            updatedAt: new Date('2025-04-05T06:00:00')
+          },
+          {
+            status: 'in_progress',
+            comment: 'Crew on site, containment in progress',
+            updatedAt: new Date('2025-04-05T07:00:00')
+          },
+          {
+            status: 'resolved',
+            comment: 'Repair completed, area sanitized',
+            updatedAt: new Date('2025-04-05T16:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-05T05:55:00'),
+        updatedAt: new Date('2025-04-05T16:00:00')
+      },
+
+      // Complaint 11 - Road damage, resolved
+      {
+        title: 'Pothole on Oak Street repaired',
+        description: 'Large pothole filled and road resurfaced on Oak Street between 3rd and 4th.',
+        category: 'Road Damage',
+        priority: 'medium',
+        status: 'resolved',
+        location: {
+          areaName: 'Oak Street Business District',
+          coordinates: {
+            latitude: 40.7145,
+            longitude: -74.0095
+          }
+        },
+        assignedTeam: {
+          name: 'Road Repair Crew 3',
+          members: ['Steve M.', 'Patty L.']
+        },
+        images: [
+          {
+            url: 'https://example.com/images/oak_road_after.jpg',
+            uploadedAt: new Date('2025-04-12')
+          }
+        ],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Pothole reported',
+            updatedAt: new Date('2025-04-10')
+          },
+          {
+            status: 'under_review',
+            comment: 'Assessment completed',
+            updatedAt: new Date('2025-04-10')
+          },
+          {
+            status: 'in_progress',
+            comment: 'Repair work commenced',
+            updatedAt: new Date('2025-04-11')
+          },
+          {
+            status: 'resolved',
+            comment: 'Repair completed and inspected',
+            updatedAt: new Date('2025-04-12')
+          }
+        ],
+        createdAt: new Date('2025-04-10T09:00:00'),
+        updatedAt: new Date('2025-04-12T15:00:00')
+      },
+
+      // Complaint 12 - Electricity, pending
+      {
+        title: 'Flickering street lights on Main Blvd',
+        description: 'Multiple street lights on Main Boulevard flickering intermittently at night. Safety concern.',
+        category: 'Electricity Fault',
         priority: 'low',
         status: 'pending',
-        reportedBy: citizen2._id
+        location: {
+          areaName: 'Main Boulevard',
+          coordinates: {
+            latitude: 40.7110,
+            longitude: -74.002
+          }
+        },
+        assignedTeam: {
+          name: '',
+          members: []
+        },
+        images: [],
+        updates: [
+          {
+            status: 'pending',
+            comment: 'Complaint filed',
+            updatedAt: new Date('2025-04-29T20:00:00')
+          }
+        ],
+        createdAt: new Date('2025-04-29T19:55:00'),
+        updatedAt: new Date('2025-04-29T20:00:00')
       }
     ];
 
     await Complaint.insertMany(complaints);
-    console.log('Sample complaints created');
+    console.log(`Successfully seeded ${complaints.length} complaints`);
 
-    console.log('\nSeed data created successfully!');
-    console.log('\nTest accounts:');
-    console.log('Admin: admin@municipal.gov / admin123');
-    console.log('Citizen: john@example.com / user123');
-    
+    console.log('\n=== DICT411 MongoDB Demo: Illegal Dumping Complaint Tracker ===');
+    console.log('\nSample data created successfully!');
+    console.log('\nThe database contains:');
+    console.log(`- ${complaints.length} total complaints`);
+    console.log(`- Categories: ${[...new Set(complaints.map(c => c.category))].join(', ')}`);
+    console.log(`- Locations: ${[...new Set(complaints.map(c => c.location.areaName))].join(', ')}`);
+    console.log(`- High priority: ${complaints.filter(c => c.priority === 'high').length}`);
+    console.log(`- With updates: ${complaints.filter(c => c.updates.length > 0).length}`);
+    console.log(`- With images: ${complaints.filter(c => c.images.length > 0).length}`);
+    console.log('\nBackend API endpoints:');
+    console.log('  GET  /api/complaints                  - List all complaints');
+    console.log('  GET  /api/complaints/:id             - Get single complaint');
+    console.log('  POST /api/complaints                 - Create new complaint');
+    console.log('  PUT  /api/complaints/:id             - Update complaint');
+    console.log('  DELETE /api/complaints/:id           - Delete complaint');
+    console.log('  POST /api/complaints/:id/updates     - Add status update');
+    console.log('  POST /api/complaints/:id/images      - Add image');
+    console.log('  GET  /api/reports/category           - Complaints per category');
+    console.log('  GET  /api/reports/area               - Complaints per area');
+    console.log('  GET  /api/reports/high-priority      - High priority count');
+    console.log('  GET  /api/reports/monthly-trend      - Monthly trend');
+    console.log('  GET  /api/reports/hotspots           - Top 5 hotspot areas');
+    console.log('  GET  /api/reports/status             - Status distribution');
+    console.log('  GET  /api/reports/priority           - Priority distribution');
+    console.log('\n===========================================================');
+
     process.exit(0);
   } catch (error) {
     console.error('Seed error:', error);
