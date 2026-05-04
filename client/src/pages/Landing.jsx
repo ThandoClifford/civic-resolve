@@ -11,7 +11,7 @@ const Landing = () => {
           </div>
 <h2>Login Feature Branch</h2>
           <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-            Illegal Dumping
+          Illegal Dumping Tracker - Main Branch Version
             <span className="block text-blue-300">Complaint Tracker</span>
           </h1>
 
