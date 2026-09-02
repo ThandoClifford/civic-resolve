@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import ComplaintModal from '../components/ComplaintModal';
+import { useAuth } from '../context/AuthContext';
 
 const ViewComplaints = () => {
   const [complaints, setComplaints] = useState([]);
@@ -9,6 +10,7 @@ const ViewComplaints = () => {
   const [filter, setFilter] = useState({ status: '', category: '', priority: '' });
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     fetchComplaints();
@@ -39,6 +41,8 @@ const ViewComplaints = () => {
   const clearFilters = () => {
     setFilter({ status: '', category: '', priority: '' });
   };
+
+  const canDeleteComplaints = isAuthenticated && user?.role === 'ADMIN';
 
   const openModal = (complaint) => {
     setSelectedComplaint(complaint);
@@ -74,7 +78,8 @@ const ViewComplaints = () => {
     const classes = {
       low: 'bg-emerald-100 text-emerald-800',
       medium: 'bg-amber-100 text-amber-800',
-      high: 'bg-red-100 text-red-800'
+      high: 'bg-red-100 text-red-800',
+      critical: 'bg-fuchsia-100 text-fuchsia-800'
     };
     return classes[priority] || 'bg-gray-100 text-gray-800';
   };
@@ -84,8 +89,8 @@ const ViewComplaints = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800">All Complaints</h1>
-        <p className="text-slate-600">View and manage all illegal dumping reports</p>
+        <h1 className="text-3xl font-bold text-slate-800">All Issues</h1>
+        <p className="text-slate-600">Review and manage municipal service issues</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
@@ -132,6 +137,7 @@ const ViewComplaints = () => {
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
+              <option value="critical">Critical</option>
             </select>
           </div>
 
@@ -163,8 +169,8 @@ const ViewComplaints = () => {
       ) : complaints.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center">
           <p className="text-6xl mb-4">📭</p>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">No complaints found</h3>
-          <p className="text-slate-500 mb-4">No complaints match your filters.</p>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No issues found</h3>
+          <p className="text-slate-500 mb-4">No issues match your filters.</p>
           <button onClick={clearFilters} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
             Clear Filters
           </button>
@@ -184,9 +190,19 @@ const ViewComplaints = () => {
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusBadgeClass(complaint.status)}`}>
                       {complaint.status.replace('_', ' ')}
                     </span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getPriorityBadgeClass(complaint.priority)}`}>
-                      {complaint.priority}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getPriorityBadgeClass((complaint.priorityLevel || complaint.priority || 'low').toLowerCase())}`}>
+                      {(complaint.priorityLevel || complaint.priority || 'low').toLowerCase()}
                     </span>
+                    {complaint.priorityScore !== null && complaint.priorityScore !== undefined && (
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        {complaint.priorityScore}/100
+                      </span>
+                    )}
+                    {complaint.priorityLevel && (
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        {complaint.priorityLevel}
+                      </span>
+                    )}
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
                       {complaint.category}
                     </span>
@@ -203,14 +219,16 @@ const ViewComplaints = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(complaint._id); }}
-                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
+                {canDeleteComplaints && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(complaint._id); }}
+                      className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -6,11 +6,14 @@ node_modules/
 # Build outputs
 dist/
 build/
+client/dist/
 
 # Environment
 .env
 .env.local
 .env.*.local
+server/.env
+client/.env
 
 # Logs
 logs/
@@ -39,3 +42,4 @@ data/
 # Test
 coverage/
 .nyc_output/
+test-phase7.js

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const Complaint = require('./models/Complaint');
+const Streetlight = require('./models/Streetlight');
 
 dotenv.config();
 
@@ -33,11 +34,11 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/dumping1.jpg',
+            url: 'https://images.example.org/dumping1.jpg',
             uploadedAt: new Date('2025-04-15')
           },
           {
-            url: 'https://example.com/images/dumping2.jpg',
+            url: 'https://images.example.org/dumping2.jpg',
             uploadedAt: new Date('2025-04-15')
           }
         ],
@@ -82,7 +83,7 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/alley1.jpg',
+            url: 'https://images.example.org/alley1.jpg',
             uploadedAt: new Date('2025-04-20')
           }
         ],
@@ -122,15 +123,15 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/leak1.jpg',
+            url: 'https://images.example.org/leak1.jpg',
             uploadedAt: new Date('2025-04-18')
           },
           {
-            url: 'https://example.com/images/leak2.jpg',
+            url: 'https://images.example.org/leak2.jpg',
             uploadedAt: new Date('2025-04-18')
           },
           {
-            url: 'https://example.com/images/leak3.jpg',
+            url: 'https://images.example.org/leak3.jpg',
             uploadedAt: new Date('2025-04-18')
           }
         ],
@@ -170,7 +171,7 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/pothole1.jpg',
+            url: 'https://images.example.org/pothole1.jpg',
             uploadedAt: new Date('2025-04-22')
           }
         ],
@@ -205,7 +206,7 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/streetlight1.jpg',
+            url: 'https://images.example.org/streetlight1.jpg',
             uploadedAt: new Date('2025-04-10')
           }
         ],
@@ -285,7 +286,7 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/appliances1.jpg',
+            url: 'https://images.example.org/appliances1.jpg',
             uploadedAt: new Date('2025-04-26')
           }
         ],
@@ -344,11 +345,11 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/school1.jpg',
+            url: 'https://images.example.org/school1.jpg',
             uploadedAt: new Date('2025-04-28')
           },
           {
-            url: 'https://example.com/images/school2.jpg',
+            url: 'https://images.example.org/school2.jpg',
             uploadedAt: new Date('2025-04-28')
           }
         ],
@@ -388,7 +389,7 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/sewer1.jpg',
+            url: 'https://images.example.org/sewer1.jpg',
             uploadedAt: new Date('2025-04-05')
           }
         ],
@@ -433,7 +434,7 @@ const seedData = async () => {
         },
         images: [
           {
-            url: 'https://example.com/images/oak_road_after.jpg',
+            url: 'https://images.example.org/oak_road_after.jpg',
             uploadedAt: new Date('2025-04-12')
           }
         ],
@@ -497,7 +498,117 @@ const seedData = async () => {
     await Complaint.insertMany(complaints);
     console.log(`Successfully seeded ${complaints.length} complaints`);
 
-    console.log('\n=== DICT411 MongoDB Demo: Illegal Dumping Complaint Tracker ===');
+    await Streetlight.deleteMany({});
+    console.log('Cleared existing streetlights');
+
+    const streetlights = [
+      {
+        streetlightId: 'SL-001',
+        name: 'Main Entrance',
+        location: {
+          areaName: 'Demo Campus - Main Gate',
+          coordinates: {
+            latitude: -26.1850,
+            longitude: 28.0030
+          }
+        },
+        installationType: 'SCHOOL',
+        expectedLampState: 'ON',
+        currentLampState: 'ON',
+        deviceStatus: 'ONLINE',
+        voltage: 220,
+        current: 0.5,
+        lastSeen: new Date('2025-04-29T21:00:00'),
+        installedAt: new Date('2023-06-15'),
+        isActive: true
+      },
+      {
+        streetlightId: 'SL-002',
+        name: 'Main Road',
+        location: {
+          areaName: 'Demo Campus - Main Road',
+          coordinates: {
+            latitude: -26.1855,
+            longitude: 28.0038
+          }
+        },
+        installationType: 'MAIN_ROAD',
+        expectedLampState: 'ON',
+        currentLampState: 'ON',
+        deviceStatus: 'ONLINE',
+        voltage: 220,
+        current: 0.6,
+        lastSeen: new Date('2025-04-29T21:00:00'),
+        installedAt: new Date('2022-11-20'),
+        isActive: true
+      },
+      {
+        streetlightId: 'SL-003',
+        name: 'Pedestrian Crossing',
+        location: {
+          areaName: 'Demo Campus - Pedestrian Crossing',
+          coordinates: {
+            latitude: -26.1862,
+            longitude: 28.0045
+          }
+        },
+        installationType: 'PEDESTRIAN_CROSSING',
+        expectedLampState: 'ON',
+        currentLampState: 'UNKNOWN',
+        deviceStatus: 'WARNING',
+        voltage: 215,
+        current: 0.4,
+        lastSeen: new Date('2025-04-29T19:30:00'),
+        installedAt: new Date('2024-02-10'),
+        isActive: true
+      },
+      {
+        streetlightId: 'SL-004',
+        name: 'Residential Street',
+        location: {
+          areaName: 'Demo Campus - Residential Side Street',
+          coordinates: {
+            latitude: -26.1868,
+            longitude: 28.0052
+          }
+        },
+        installationType: 'RESIDENTIAL',
+        expectedLampState: 'ON',
+        currentLampState: 'OFF',
+        deviceStatus: 'FAULT',
+        voltage: 210,
+        current: 0.1,
+        lastSeen: new Date('2025-04-29T18:45:00'),
+        installedAt: new Date('2023-09-05'),
+        isActive: true
+      },
+      {
+        streetlightId: 'SL-005',
+        name: 'Taxi Rank',
+        location: {
+          areaName: 'Demo Campus - Transport/Taxi Area',
+          coordinates: {
+            latitude: -26.1874,
+            longitude: 28.0060
+          }
+        },
+        installationType: 'TAXI_RANK',
+        expectedLampState: 'ON',
+        currentLampState: 'ON',
+        deviceStatus: 'ONLINE',
+        voltage: 220,
+        current: 0.55,
+        lastSeen: new Date('2025-04-29T21:00:00'),
+        installedAt: new Date('2024-05-18'),
+        isActive: true
+      }
+    };
+
+    await Streetlight.insertMany(streetlights);
+    console.log(`Successfully seeded ${streetlights.length} streetlights`);
+    console.log('NOTE: Streetlight coordinates are prototype/demo locations clustered around a simulated campus area.`);
+
+    console.log('\n=== CivicResolve issue seed data ===');
     console.log('\nSample data created successfully!');
     console.log('\nThe database contains:');
     console.log(`- ${complaints.length} total complaints`);
@@ -521,6 +632,10 @@ const seedData = async () => {
     console.log('  GET  /api/reports/hotspots           - Top 5 hotspot areas');
     console.log('  GET  /api/reports/status             - Status distribution');
     console.log('  GET  /api/reports/priority           - Priority distribution');
+    console.log('  GET  /api/streetlights               - List streetlights');
+    console.log('  GET  /api/streetlights/:id          - Get single streetlight');
+    console.log('  POST /api/streetlights              - Create streetlight (admin)');
+    console.log('  PATCH /api/streetlights/:id         - Update streetlight (admin)');
     console.log('\n===========================================================');
 
     process.exit(0);

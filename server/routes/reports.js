@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireAuth, requireRole } = require('../middleware/auth');
 const {
   getComplaintsPerCategory,
   getComplaintsPerArea,
@@ -12,7 +13,10 @@ const {
   getUpdateActivity
 } = require('../controllers/reportsController');
 
-// All aggregation endpoints - no auth required for this mini project
+// Analytics are admin-only.
+router.use(requireAuth, requireRole('ADMIN'));
+
+// Aggregation endpoints for current issue analytics views
 router.get('/category', getComplaintsPerCategory);
 router.get('/area', getComplaintsPerArea);
 router.get('/high-priority', getHighPriorityCount);

@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -9,9 +11,12 @@ const Navbar = () => {
 
   const navItems = [
     { to: '/', label: 'Home' },
-    { to: '/complaints', label: 'Complaints' },
-    { to: '/submit', label: 'Submit' },
-    { to: '/reports', label: 'Reports' }
+    { to: '/submit', label: 'Report an Issue' },
+    { to: '/complaints', label: 'Issues' },
+    ...(user?.role === 'ADMIN' ? [{ to: '/reports', label: 'Analytics' }] : []),
+    ...(user?.role === 'MUNICIPAL_OFFICIAL' || user?.role === 'ADMIN'
+      ? [{ to: '/smartlight', label: 'SmartLight' }]
+      : [])
   ];
 
   return (
@@ -23,7 +28,7 @@ const Navbar = () => {
               <span className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-sm">
                 🏛️
               </span>
-              <span className="hidden md:inline">DumpingTracker</span>
+              <span className="hidden md:inline">CivicResolve</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-1">
@@ -43,13 +48,28 @@ const Navbar = () => {
             </div>
           </div>
 
-          <div className="text-sm text-slate-400">
-            Illegal Dumping Tracker (DICT411)
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                <div className="text-sm text-slate-400">
+                  {user?.name || 'Account'} • {user?.role?.replace('_', ' ') || 'User'}
+                </div>
+                <button
+                  onClick={() => logout()}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-slate-700 text-white hover:bg-slate-600"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link to="/login" className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700">
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Mobile navigation */}
       <div className="md:hidden border-t border-slate-700 px-4 py-2">
         <div className="flex justify-around">
           {navItems.map((item) => (

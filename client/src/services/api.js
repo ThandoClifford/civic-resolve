@@ -7,6 +7,14 @@ const api = axios.create({
   }
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('civicresolve-token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
+
 // Complaint CRUD endpoints
 export const getComplaints = (params) => api.get('/complaints', { params });
 export const getComplaintById = (id) => api.get(`/complaints/${id}`);
@@ -26,5 +34,9 @@ export const getReportsMonthlyTrend = () => api.get('/reports/monthly-trend');
 export const getReportsHotspots = () => api.get('/reports/hotspots');
 export const getReportsStatus = () => api.get('/reports/status');
 export const getReportsPriority = () => api.get('/reports/priority');
+
+export const getStreetlights = () => api.get('/streetlights');
+export const getFaults = (params) => api.get('/faults', { params });
+export const updateFaultStatus = (id, data) => api.patch(`/faults/${id}/status`, data);
 
 export default api;

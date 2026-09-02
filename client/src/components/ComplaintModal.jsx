@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
   const [current, setCurrent] = useState(complaint);
@@ -8,10 +9,44 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
   const [newUpdateComment, setNewUpdateComment] = useState('');
   const [newStatus, setNewStatus] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [relatedIssues, setRelatedIssues] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedError, setRelatedError] = useState('');
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     setCurrent(complaint);
   }, [complaint]);
+
+  const currentOwnerId = current?.reportedBy?._id || current?.reportedBy || null;
+  const canManageComplaint = Boolean(isAuthenticated && user && (user.role === 'ADMIN' || user.role === 'MUNICIPAL_OFFICIAL' || currentOwnerId === user.id));
+  const canEditStatus = Boolean(isAuthenticated && user && (user.role === 'ADMIN' || user.role === 'MUNICIPAL_OFFICIAL'));
+  const canAddUpdate = Boolean(canManageComplaint);
+  const canAddImage = Boolean(canManageComplaint);
+
+  useEffect(() => {
+    if (!isOpen || !current?._id || !canEditStatus) {
+      setRelatedIssues([]);
+      setRelatedError('');
+      setRelatedLoading(false);
+      return;
+    }
+
+    const fetchRelatedIssues = async () => {
+      setRelatedLoading(true);
+      setRelatedError('');
+      try {
+        const response = await api.get(`/complaints/${current._id}/related`);
+        setRelatedIssues(response.data.relatedIssues || []);
+      } catch (error) {
+        setRelatedError(error.response?.data?.message || 'Failed to load related issues');
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
+    fetchRelatedIssues();
+  }, [current?._id, isOpen, canEditStatus]);
 
   const handleStatusChange = async (e) => {
     const status = e.target.value;
@@ -36,11 +71,15 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
     if (!newUpdateComment.trim()) return;
     setLoading(true);
     try {
-      await api.post(`/complaints/${current._id}/updates`, {
-        comment: newUpdateComment,
-        status: current.status
-      });
+      const payload = { comment: newUpdateComment };
+
+      if (canEditStatus && newStatus) {
+        payload.status = newStatus;
+      }
+
+      await api.post(`/complaints/${current._id}/updates`, payload);
       setNewUpdateComment('');
+      setNewStatus('');
       await refreshComplaint();
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -68,6 +107,15 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
   const refreshComplaint = async () => {
     const res = await api.get(`/complaints/${current._id}`);
     setCurrent(res.data.complaint);
+
+    if (canEditStatus) {
+      try {
+        const relatedRes = await api.get(`/complaints/${current._id}/related`);
+        setRelatedIssues(relatedRes.data.relatedIssues || []);
+      } catch (error) {
+        setRelatedError(error.response?.data?.message || 'Failed to load related issues');
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -86,16 +134,29 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
     const classes = {
       low: 'bg-emerald-100 text-emerald-800',
       medium: 'bg-amber-100 text-amber-800',
-      high: 'bg-red-100 text-red-800'
+      high: 'bg-red-100 text-red-800',
+      critical: 'bg-fuchsia-100 text-fuchsia-800'
     };
     return classes[priority] || 'bg-gray-100 text-gray-800';
+  };
+
+  const displayPriorityLevel = String(current?.priorityLevel || current?.priority || 'low').toUpperCase();
+  const hasCalculatedPriority = current?.priorityScore !== null && current?.priorityScore !== undefined;
+  const priorityBreakdown = current?.priorityBreakdown || {};
+
+  const formatBreakdownValue = (value) => {
+    if (value === null || value === undefined) {
+      return 'n/a';
+    }
+
+    return String(value).replace(/_/g, ' ');
   };
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-800">Complaint Details</h2>
+          <h2 className="text-xl font-bold text-slate-800">Issue Details</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -112,9 +173,14 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusClass(current.status)}`}>
                     {current.status.replace('_', ' ')}
                   </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getPriorityClass(current.priority)}`}>
-                    {current.priority}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getPriorityClass((current.priorityLevel || current.priority || 'low').toLowerCase())}`}>
+                    {displayPriorityLevel}
                   </span>
+                  {hasCalculatedPriority && (
+                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                      {current.priorityScore}/100
+                    </span>
+                  )}
                   <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
                     {current.category}
                   </span>
@@ -162,6 +228,106 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
                 </div>
               </div>
 
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3">Priority Assessment</h4>
+                {hasCalculatedPriority ? (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getPriorityClass((current.priorityLevel || current.priority || 'low').toLowerCase())}`}>
+                        {displayPriorityLevel}
+                      </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        {current.priorityScore}/100
+                      </span>
+                      {current.priorityCalculatedAt && (
+                        <span className="text-xs text-slate-500">
+                          Calculated {new Date(current.priorityCalculatedAt).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {current.priorityExplanation && (
+                      <p className="text-sm text-slate-700 mb-4">{current.priorityExplanation}</p>
+                    )}
+                    {priorityBreakdown && (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-600">Safety Risk</span>
+                          <span className="font-medium text-slate-800">
+                            {formatBreakdownValue(priorityBreakdown.safetyRisk?.value)} - {priorityBreakdown.safetyRisk?.points ?? 0}/{priorityBreakdown.safetyRisk?.maxPoints ?? 30}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-600">Environmental Impact</span>
+                          <span className="font-medium text-slate-800">
+                            {formatBreakdownValue(priorityBreakdown.environmentalImpact?.value)} - {priorityBreakdown.environmentalImpact?.points ?? 0}/{priorityBreakdown.environmentalImpact?.maxPoints ?? 20}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-600">People Affected</span>
+                          <span className="font-medium text-slate-800">
+                            {priorityBreakdown.peopleAffected?.value ?? 0} - {priorityBreakdown.peopleAffected?.points ?? 0}/{priorityBreakdown.peopleAffected?.maxPoints ?? 20}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-600">Location Sensitivity</span>
+                          <span className="font-medium text-slate-800">
+                            {formatBreakdownValue(priorityBreakdown.locationSensitivity?.value)} - {priorityBreakdown.locationSensitivity?.points ?? 0}/{priorityBreakdown.locationSensitivity?.maxPoints ?? 15}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-slate-600">Issue Age</span>
+                          <span className="font-medium text-slate-800">
+                            {priorityBreakdown.issueAge?.days ?? 0} day(s) - {priorityBreakdown.issueAge?.points ?? 0}/{priorityBreakdown.issueAge?.maxPoints ?? 15}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-600">Priority data has not been recalculated for this legacy complaint yet.</p>
+                )}
+              </div>
+
+              {canEditStatus && (
+                <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                  <h4 className="text-sm font-semibold text-slate-700 mb-3">Potentially Related Issues</h4>
+
+                  {relatedLoading ? (
+                    <p className="text-sm text-slate-500">Loading related issues...</p>
+                  ) : relatedError ? (
+                    <p className="text-sm text-red-600">{relatedError}</p>
+                  ) : relatedIssues.length === 0 ? (
+                    <p className="text-sm text-slate-500">No related issues found by the current similarity rules.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {relatedIssues.map((item) => (
+                        <div key={item.complaintId} className="rounded-lg border border-slate-200 p-3 bg-slate-50">
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <div>
+                              <p className="font-semibold text-slate-800">{item.complaint?.title || 'Related complaint'}</p>
+                              <p className="text-xs text-slate-500">
+                                {item.complaint?.category} • {item.complaint?.areaName || 'Unknown area'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-slate-800">{item.similarityScore}/100</p>
+                              <p className="text-xs text-slate-600">{item.relationshipLevel.replace(/_/g, ' ')}</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600 mb-2">{item.explanation}</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-700">
+                            <div>Geographic: {item.breakdown?.geographic ?? 0}/35</div>
+                            <div>Category: {item.breakdown?.category ?? 0}/25</div>
+                            <div>Text: {item.breakdown?.text ?? 0}/25</div>
+                            <div>Time: {item.breakdown?.time ?? 0}/15</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Images */}
               {current.images && current.images.length > 0 && (
                 <div>
@@ -200,29 +366,53 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
               )}
 
               {/* Add Update Form */}
-              <div className="border-t border-slate-200 pt-6">
-                <h4 className="text-sm font-semibold text-slate-600 mb-3">Add Update</h4>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <select
-                      value={newStatus}
-                      onChange={handleStatusChange}
-                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300"
-                    >
-                      <option value="">Set Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="under_review">Under Review</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="resolved">Resolved</option>
-                    </select>
-                    <button
-                      onClick={applyStatus}
-                      disabled={loading || !newStatus}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
-                    >
-                      Update Status
-                    </button>
+              {canAddUpdate && canEditStatus && (
+                <div className="border-t border-slate-200 pt-6">
+                  <h4 className="text-sm font-semibold text-slate-600 mb-3">Add Update</h4>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <select
+                        value={newStatus}
+                        onChange={handleStatusChange}
+                        className="flex-1 px-3 py-2 rounded-lg border border-slate-300"
+                      >
+                        <option value="">Set Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="under_review">Under Review</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                      </select>
+                      <button
+                        onClick={applyStatus}
+                        disabled={loading || !newStatus}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                      >
+                        Update Status
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newUpdateComment}
+                        onChange={(e) => setNewUpdateComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 px-3 py-2 rounded-lg border border-slate-300"
+                      />
+                      <button
+                        onClick={addUpdate}
+                        disabled={loading || !newUpdateComment.trim()}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
+                      >
+                        Add Comment
+                      </button>
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {canAddUpdate && !canEditStatus && (
+                <div className="border-t border-slate-200 pt-6">
+                  <h4 className="text-sm font-semibold text-slate-600 mb-3">Add Comment</h4>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -240,28 +430,30 @@ const ComplaintModal = ({ complaint, isOpen, onClose, onUpdate }) => {
                     </button>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Add Image URL */}
-              <div className="border-t border-slate-200 pt-6">
-                <h4 className="text-sm font-semibold text-slate-600 mb-3">Add Image URL</h4>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="flex-1 px-3 py-2 rounded-lg border border-slate-300"
-                  />
-                  <button
-                    onClick={addImage}
-                    disabled={loading || !newImageUrl.trim()}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
-                  >
-                    Add Image
-                  </button>
+              {canAddImage && (
+                <div className="border-t border-slate-200 pt-6">
+                  <h4 className="text-sm font-semibold text-slate-600 mb-3">Add Image URL</h4>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      placeholder="https://your-organization.org/photo.jpg"
+                      className="flex-1 px-3 py-2 rounded-lg border border-slate-300"
+                    />
+                    <button
+                      onClick={addImage}
+                      disabled={loading || !newImageUrl.trim()}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+                    >
+                      Add Image
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <p className="text-center text-slate-500 py-8">Loading...</p>

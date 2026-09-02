@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getReportsCategory,
   getReportsArea,
@@ -8,8 +9,10 @@ import {
   getReportsStatus,
   getReportsPriority
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Reports = () => {
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const [categoryData, setCategoryData] = useState([]);
   const [areaData, setAreaData] = useState([]);
   const [highPriorityData, setHighPriorityData] = useState(null);
@@ -20,9 +23,41 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const canViewAnalytics = isAuthenticated && user?.role === 'ADMIN';
+
   useEffect(() => {
+    if (!canViewAnalytics) {
+      setLoading(false);
+      return;
+    }
+
     fetchAllReports();
-  }, []);
+  }, [canViewAnalytics]);
+
+  if (authLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-slate-600">Checking access...</div>
+      </div>
+    );
+  }
+
+  if (!canViewAnalytics) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8">
+          <h1 className="text-2xl font-bold text-amber-900 mb-2">Admin Access Required</h1>
+          <p className="text-amber-800 mb-4">Analytics are restricted to administrators.</p>
+          <div className="flex gap-3">
+            {!isAuthenticated && (
+              <Link to="/login" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Login</Link>
+            )}
+            <Link to="/complaints" className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800">Back to Issues</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchAllReports = async () => {
     setLoading(true);
@@ -80,15 +115,15 @@ const Reports = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800">MongoDB Aggregation Reports</h1>
-        <p className="text-slate-600">NoSQL query results and pipeline outputs</p>
+        <h1 className="text-3xl font-bold text-slate-800">Issue Analytics</h1>
+        <p className="text-slate-600">Current reporting summaries and issue activity</p>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="text-3xl font-bold text-blue-600">{totalComplaints}</div>
-          <div className="text-sm text-slate-600">Total Complaints</div>
+          <div className="text-sm text-slate-600">Total Issues</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="text-3xl font-bold text-red-600">{totalHighPriority}</div>
@@ -107,7 +142,7 @@ const Reports = () => {
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         {/* Complaints by Category */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">1. Complaints per Category (Aggregation)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">1. Issues by Category</h3>
           <div className="space-y-3">
             {categoryData.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -120,7 +155,7 @@ const Reports = () => {
 
         {/* Complaints by Status */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">2. Complaints per Status (Aggregation)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">2. Issues by Status</h3>
           <div className="space-y-3">
             {statusData.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -133,7 +168,7 @@ const Reports = () => {
 
         {/* Complaints by Priority */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">3. Complaints per Priority (Aggregation)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">3. Issues by Priority</h3>
           <div className="space-y-3">
             {priorityData.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -146,7 +181,7 @@ const Reports = () => {
 
         {/* High Priority Count */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">4. High Priority Complaints (Aggregation)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">4. High Priority Issues</h3>
           <div className="p-6 bg-red-50 rounded-lg text-center">
             <div className="text-5xl font-bold text-red-600 mb-2">{totalHighPriority}</div>
             <p className="text-sm text-slate-600">High priority complaints requiring immediate attention</p>
@@ -156,7 +191,7 @@ const Reports = () => {
 
       {/* Monthly Trend */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">5. Monthly Trend (Aggregation Pipeline)</h3>
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">5. Monthly Trend</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -189,7 +224,7 @@ const Reports = () => {
 
       {/* Top 5 Hotspot Areas */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">6. Top 5 Hotspot Areas (Aggregation Pipeline)</h3>
+        <h3 className="text-lg font-semibold text-slate-800 mb-4">6. Top 5 Hotspot Areas</h3>
         {hotspots.length > 0 ? (
           <div className="space-y-4">
             {hotspots.map((area, idx) => (
@@ -224,22 +259,6 @@ const Reports = () => {
         )}
       </div>
 
-      {/* Query Info */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">MongoDB Aggregation Pipelines Used</h3>
-        <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
-          <div>
-            <p><strong>Category Report:</strong> $group by category</p>
-            <p><strong>Area Report:</strong> $match + $group by location.areaName</p>
-            <p><strong>High Priority:</strong> $match + $group with $sum</p>
-          </div>
-          <div>
-            <p><strong>Monthly Trend:</strong> $dateToString + $group</p>
-            <p><strong>Hotspots:</strong> $group + $sort + $limit (top 5)</p>
-            <p><strong>Status/Priority:</strong> Simple $group aggregations</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

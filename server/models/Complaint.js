@@ -21,9 +21,52 @@ const complaintSchema = new mongoose.Schema({
   },
   priority: {
     type: String,
-    enum: ['low', 'medium', 'high'],
+    enum: ['low', 'medium', 'high', 'critical'],
     default: 'medium',
     index: true
+  },
+  safetyRisk: {
+    type: String,
+    enum: ['none', 'low', 'medium', 'high', 'critical'],
+    default: 'none'
+  },
+  environmentalImpact: {
+    type: String,
+    enum: ['none', 'low', 'medium', 'high'],
+    default: 'none'
+  },
+  peopleAffected: {
+    type: Number,
+    min: 0,
+    default: 0
+  },
+  locationSensitivity: {
+    type: String,
+    enum: ['normal_residential', 'business_commercial', 'public_transport_area', 'high_density_public_area', 'school', 'hospital'],
+    default: 'normal_residential'
+  },
+  priorityScore: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: null
+  },
+  priorityLevel: {
+    type: String,
+    enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+    default: null
+  },
+  priorityBreakdown: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  priorityExplanation: {
+    type: String,
+    default: ''
+  },
+  priorityCalculatedAt: {
+    type: Date,
+    default: null
   },
   status: {
     type: String,
@@ -62,6 +105,48 @@ const complaintSchema = new mongoose.Schema({
       trim: true
     }]
   },
+  reportedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true
+  },
+  relatedIssues: [{
+    complaintId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Complaint',
+      required: true
+    },
+    similarityScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+      required: true
+    },
+    relationshipLevel: {
+      type: String,
+      enum: ['UNRELATED', 'POSSIBLY_RELATED', 'LIKELY_RELATED', 'STRONGLY_RELATED'],
+      required: true
+    },
+    breakdown: {
+      geographic: { type: Number, min: 0, max: 35, default: 0 },
+      category: { type: Number, min: 0, max: 25, default: 0 },
+      text: { type: Number, min: 0, max: 25, default: 0 },
+      time: { type: Number, min: 0, max: 15, default: 0 }
+    },
+    explanation: {
+      type: String,
+      default: ''
+    },
+    distanceKm: {
+      type: Number,
+      default: null
+    },
+    calculatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   images: [{
     url: {
       type: String,
@@ -97,8 +182,7 @@ const complaintSchema = new mongoose.Schema({
   }
 });
 
-// Compound index for geospatial queries
-complaintSchema.index({ 'location.coordinates': '2dsphere' });
+complaintSchema.index({ 'relatedIssues.complaintId': 1 });
 
 // Text search index
 complaintSchema.index({ title: 'text', description: 'text', 'location.areaName': 'text' });
