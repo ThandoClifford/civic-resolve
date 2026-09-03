@@ -37,6 +37,7 @@ const initializeSocket = (server) => {
       }
 
       socket.user = user;
+      socket.join(`role:${user.role}`);
       console.log(`[Socket] Official connected: ${user.email}`);
     } catch (error) {
       socket.disconnect(true);

@@ -72,6 +72,7 @@ const SmartLightDashboard = () => {
   const [toast, setToast] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
   const [alerts, setAlerts] = useState([]);
+  const [escalations, setEscalations] = useState([]);
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -80,6 +81,11 @@ const SmartLightDashboard = () => {
 
   const handleAlert = useCallback((data) => {
     setAlerts((prev) => [data, ...prev].slice(0, 50));
+    showToast(data.message);
+  }, [showToast]);
+
+  const handleEscalation = useCallback((data) => {
+    setEscalations((prev) => [data, ...prev].slice(0, 50));
     showToast(data.message);
   }, [showToast]);
 
@@ -142,6 +148,9 @@ const SmartLightDashboard = () => {
     },
     onAlert: (data) => {
       handleAlert(data);
+    },
+    onEscalation: (data) => {
+      handleEscalation(data);
     },
     onConnect: () => setSocketConnected(true),
     onDisconnect: () => setSocketConnected(false)
@@ -296,6 +305,36 @@ const SmartLightDashboard = () => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {escalations.length > 0 && user?.role === 'ADMIN' && (
+          <div className="bg-white rounded-xl border border-red-200 shadow-sm mb-6">
+            <div className="px-4 py-3 border-b border-red-200">
+              <h2 className="text-sm font-semibold text-red-800">Escalations</h2>
+            </div>
+            <div className="max-h-64 overflow-y-auto p-4 space-y-2">
+              {escalations.map((escalation, index) => (
+                <div
+                  key={`${escalation.faultId}-${escalation.escalatedAt}-${index}`}
+                  className="rounded-lg border border-red-200 bg-red-50 p-3"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-slate-900">{escalation.streetlightId}</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded text-white bg-red-600">
+                      ESCALATED
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-600 mb-1">
+                    {escalation.streetlightName} • {escalation.areaName}
+                  </div>
+                  <div className="text-xs text-slate-700 font-medium mb-1">{escalation.faultType?.replace('_', ' ')}</div>
+                  <div className="text-xs text-slate-500">
+                    Score: {escalation.priorityScore ?? '--'}/100 • {new Date(escalation.escalatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

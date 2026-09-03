@@ -50,6 +50,8 @@ mongoose
     const server = http.createServer(app);
     const { initializeSocket } = require('./services/socketService');
     initializeSocket(server);
+    const { recoverPendingEscalations } = require('./services/smartlightEscalationService');
+    recoverPendingEscalations();
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

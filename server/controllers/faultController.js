@@ -184,6 +184,9 @@ const updateFaultStatus = async (req, res) => {
       fault.resolvedAt = new Date();
     }
 
+    const { cancelEscalation } = require('../services/smartlightEscalationService');
+    await cancelEscalation(fault);
+
     fault.activity.push({
       action: 'STATUS_CHANGED',
       fromStatus: previousStatus,

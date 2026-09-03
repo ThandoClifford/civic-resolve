@@ -87,6 +87,19 @@ const faultSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  escalationStatus: {
+    type: String,
+    enum: ['NONE', 'PENDING', 'ESCALATED'],
+    default: 'NONE'
+  },
+  escalationScheduledAt: {
+    type: Date,
+    default: null
+  },
+  escalatedAt: {
+    type: Date,
+    default: null
+  },
   activity: [
     {
       action: {

@@ -55,12 +55,17 @@ const checkAndEmitAlert = async (fault, previousPriorityLevel) => {
     createdAt: populated.lastAlertedAt || new Date()
   };
 
-  try {
-    const io = getIO();
-    io.emit('smartlight:alert', payload);
-    console.log(`[Socket] Emitted smartlight:alert for ${populated.streetlightId}`);
-  } catch (error) {
-    console.error('Socket alert emit error:', error);
+   try {
+     const io = getIO();
+     io.emit('smartlight:alert', payload);
+     console.log(`[Socket] Emitted smartlight:alert for ${populated.streetlightId}`);
+   } catch (error) {
+     console.error('Socket alert emit error:', error);
+   }
+
+  if (currentLevel === 'CRITICAL') {
+    const { scheduleEscalation } = require('./smartlightEscalationService');
+    await scheduleEscalation(fault);
   }
 
   return payload;
