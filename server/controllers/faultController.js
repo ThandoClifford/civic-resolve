@@ -18,6 +18,8 @@ const recalculateFaultPriority = async (fault) => {
 
   const result = calculatePriority(fault, streetlight);
 
+  const previousPriorityLevel = fault.priorityLevel;
+
   const changed =
     fault.priorityScore !== result.priorityScore ||
     fault.priorityLevel !== result.priorityLevel ||
@@ -31,6 +33,9 @@ const recalculateFaultPriority = async (fault) => {
     fault.priorityExplanation = result.priorityExplanation;
     fault.priorityCalculatedAt = result.priorityCalculatedAt;
     await fault.save();
+
+    const { checkAndEmitAlert } = require('../services/smartlightAlertService');
+    await checkAndEmitAlert(fault, previousPriorityLevel);
   }
 
   return fault;

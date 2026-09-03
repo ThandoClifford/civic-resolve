@@ -78,6 +78,15 @@ const faultSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  lastAlertedPriorityLevel: {
+    type: String,
+    enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+    default: null
+  },
+  lastAlertedAt: {
+    type: Date,
+    default: null
+  },
   activity: [
     {
       action: {

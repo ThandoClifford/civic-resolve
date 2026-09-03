@@ -71,11 +71,17 @@ const SmartLightDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [toast, setToast] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
+  const [alerts, setAlerts] = useState([]);
 
   const showToast = useCallback((message) => {
     setToast(message);
     setTimeout(() => setToast(''), 4000);
   }, []);
+
+  const handleAlert = useCallback((data) => {
+    setAlerts((prev) => [data, ...prev].slice(0, 50));
+    showToast(data.message);
+  }, [showToast]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -133,6 +139,9 @@ const SmartLightDashboard = () => {
       if (selectedFault && (selectedFault._id || selectedFault.id) === data.id) {
         setSelectedFault(null);
       }
+    },
+    onAlert: (data) => {
+      handleAlert(data);
     },
     onConnect: () => setSocketConnected(true),
     onDisconnect: () => setSocketConnected(false)
@@ -249,6 +258,47 @@ const SmartLightDashboard = () => {
             <div className="text-2xl font-bold text-red-700 mt-1">{criticalCount}</div>
           </div>
         </div>
+
+        {alerts.length > 0 && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
+            <div className="px-4 py-3 border-b border-slate-200">
+              <h2 className="text-sm font-semibold text-slate-800">Alerts</h2>
+            </div>
+            <div className="max-h-64 overflow-y-auto p-4 space-y-2">
+              {alerts.map((alert, index) => {
+                const isCritical = alert.priorityLevel === 'CRITICAL';
+                return (
+                  <div
+                    key={`${alert.faultId}-${alert.createdAt}-${index}`}
+                    className={`rounded-lg border p-3 ${
+                      isCritical
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-amber-50 border-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-semibold text-slate-900">{alert.streetlightId}</span>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded text-white ${
+                          isCritical ? 'bg-red-600' : 'bg-amber-600'
+                        }`}
+                      >
+                        {alert.priorityLevel}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600 mb-1">
+                      {alert.streetlightName} • {alert.areaName}
+                    </div>
+                    <div className="text-xs text-slate-700 font-medium mb-1">{alert.faultType?.replace('_', ' ')}</div>
+                    <div className="text-xs text-slate-500">
+                      Score: {alert.priorityScore ?? '--'}/100 • {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

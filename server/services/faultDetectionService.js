@@ -15,6 +15,7 @@ const findUnresolvedFault = async (streetlightId, faultType) => {
 };
 
 const applyPriority = async (fault, streetlight) => {
+  const previousPriorityLevel = fault.priorityLevel;
   const result = calculatePriority(fault, streetlight);
   fault.priorityScore = result.priorityScore;
   fault.priorityLevel = result.priorityLevel;
@@ -22,6 +23,10 @@ const applyPriority = async (fault, streetlight) => {
   fault.priorityExplanation = result.priorityExplanation;
   fault.priorityCalculatedAt = result.priorityCalculatedAt;
   await fault.save();
+
+  const { checkAndEmitAlert } = require('./smartlightAlertService');
+  await checkAndEmitAlert(fault, previousPriorityLevel);
+
   return fault;
 };
 

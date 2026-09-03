@@ -46,6 +46,12 @@ export const useSmartLightSocket = (token, callbacks = {}) => {
       }
     });
 
+    socket.on('smartlight:alert', (data) => {
+      if (callbacksRef.current.onAlert) {
+        callbacksRef.current.onAlert(data);
+      }
+    });
+
     socket.on('disconnect', (reason) => {
       console.log('[Socket] Disconnected:', reason);
       if (callbacksRef.current.onDisconnect) {
