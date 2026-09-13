@@ -39,4 +39,7 @@ export const getStreetlights = () => api.get('/streetlights');
 export const getFaults = (params) => api.get('/faults', { params });
 export const updateFaultStatus = (id, data) => api.patch(`/faults/${id}/status`, data);
 
+export const setDemoMode = (mode) => api.post('/demo/mode', { mode });
+export const setDemoScenario = (scenario) => api.post('/demo/scenario', { scenario });
+
 export default api;

@@ -17,7 +17,49 @@ let faultMode = {
   SL005_LOW_CURRENT: false
 };
 
+const scenarioKeyMap = {
+  SL003_OFF: 'SL003_LAMP_OFF',
+  SL004_OFFLINE: 'SL004_DEVICE_OFFLINE',
+  SL005_LOW_CURRENT: 'SL005_LOW_CURRENT'
+};
+
 const randomVariation = (base, variance) => base + (Math.random() * variance * 2 - variance);
+
+const syncDemoStateFromServer = async () => {
+  if (!DEVICE_API_KEY) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/demo/state`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-device-api-key': DEVICE_API_KEY
+      }
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = await response.json();
+    const active = payload?.state?.activeScenarios || {};
+    const operatingMode = String(payload?.state?.operatingMode || 'NIGHT').toUpperCase();
+    const expectedLampState = operatingMode === 'DAY' ? 'OFF' : 'ON';
+
+    faultMode.SL003_LAMP_OFF = Boolean(active.SL003_OFF);
+    faultMode.SL004_DEVICE_OFFLINE = Boolean(active.SL004_OFFLINE);
+    faultMode.SL005_LOW_CURRENT = Boolean(active.SL005_LOW_CURRENT);
+    simulationActive = payload?.state?.simulatorRunning !== false;
+
+    STREETLIGHTS.forEach((streetlight) => {
+      streetlight.expectedLampState = expectedLampState;
+    });
+  } catch (error) {
+    console.log(`[Simulator] Demo state sync warning: ${error.message}`);
+  }
+};
 
 const generateReading = (streetlight) => {
   const isSL003 = streetlight.streetlightId === 'SL-003';
@@ -94,6 +136,8 @@ const sendTelemetry = async (reading) => {
 };
 
 const runSimulationCycle = async () => {
+  await syncDemoStateFromServer();
+
   if (!simulationActive) {
     return;
   }

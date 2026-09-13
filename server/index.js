@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth');
 const streetlightsRoutes = require('./routes/streetlights');
 const telemetryRoutes = require('./routes/telemetry');
 const faultsRoutes = require('./routes/faults');
+const demoRoutes = require('./routes/demo');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/streetlights', streetlightsRoutes);
 app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/faults', faultsRoutes);
+app.use('/api/demo', demoRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'CivicResolve API is running' });
