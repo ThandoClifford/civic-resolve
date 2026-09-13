@@ -6,11 +6,14 @@ const Faults = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
 
   useEffect(() => {
     const fetchFaults = async () => {
       try {
-        const response = await getFaults({ status: filter === 'All' ? '' : filter });
+        const params = {};
+        if (filter !== 'All') params.status = filter;
+        const response = await getFaults(params);
         setFaults(response.data.faults || []);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load faults');
@@ -21,6 +24,14 @@ const Faults = () => {
 
     fetchFaults();
   }, [filter]);
+
+  const filteredFaults = useMemo(() => {
+    let result = faults;
+    if (priorityFilter !== 'All') {
+      result = result.filter((f) => f.priorityLevel === priorityFilter);
+    }
+    return result;
+  }, [faults, priorityFilter]);
 
   const updateStatus = async (id, status) => {
     try {
@@ -42,11 +53,11 @@ const Faults = () => {
 
   return (
     <div className="page-wrap">
-      <section className="page-heading">
+      <section className="section-header">
         <div>
           <span className="eyebrow">SmartLight Fault Registry</span>
-          <h1 className="page-title">Faults</h1>
-          <p className="page-subtitle">Automatically detected IoT telemetry issues</p>
+          <h1 className="section-header-title">Faults</h1>
+          <p className="section-header-subtitle">Detected issues and their status</p>
         </div>
         <div className="page-controls">
           <label className="filter-label">Status</label>
@@ -58,13 +69,19 @@ const Faults = () => {
             <option>IN_PROGRESS</option>
             <option>RESOLVED</option>
           </select>
+          <label className="filter-label">Priority</label>
+          <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="form-input compact-select">
+            <option>All</option>
+            <option>HIGH</option>
+            <option>CRITICAL</option>
+          </select>
         </div>
       </section>
 
       <section className="panel-card">
         <div className="panel-title">
           <span>Fault Stream</span>
-          <span className="chip chip-red">{faults.length} active</span>
+          <span className="chip chip-red">{filteredFaults.length} records</span>
         </div>
         <div className="table-wrap">
           <table className="data-table">
@@ -77,13 +94,12 @@ const Faults = () => {
                 <th>Priority</th>
                 <th>Score</th>
                 <th>Status</th>
-                <th>Detected At</th>
-                <th>Occurrences</th>
-                <th>Action</th>
+                <th>Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {faults.map((fault) => (
+              {filteredFaults.map((fault) => (
                 <tr key={fault._id || fault.id}>
                   <td><strong>{fault._id?.slice(-8) || 'FAULT'}</strong></td>
                   <td>{fault.streetlightId}</td>
@@ -92,8 +108,7 @@ const Faults = () => {
                   <td><span className={`priority-pill priority-${String(fault.priorityLevel || '').toLowerCase()}`}>{fault.priorityLevel || '--'}</span></td>
                   <td>{fault.priorityScore ?? '--'}</td>
                   <td><span className={`status-pill status-${fault.status}`}>{fault.status}</span></td>
-                  <td>{fault.detectedAt ? new Date(fault.detectedAt).toLocaleString() : '--'}</td>
-                  <td>{fault.occurrenceCount ?? 1}</td>
+                  <td>{fault.detectedAt ? new Date(fault.detectedAt).toLocaleDateString() : '--'}</td>
                   <td>
                     <div className="row-actions">
                       {fault.status !== 'RESOLVED' && 

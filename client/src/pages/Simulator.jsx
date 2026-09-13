@@ -55,11 +55,11 @@ const Simulator = () => {
 
   return (
     <div className="page-wrap">
-      <section className="page-heading">
+      <section className="section-header">
         <div>
           <span className="eyebrow">SmartLight Demo</span>
-          <h1 className="page-title">Simulator</h1>
-          <p className="page-subtitle">DEMO AND TESTING ENVIRONMENT</p>
+          <h1 className="section-header-title">Simulator</h1>
+          <p className="section-header-subtitle">Control virtual streetlights for testing and demonstration</p>
         </div>
         <div className="header-right">
           <span className="live-indicator"><span /> {status}</span>
@@ -68,9 +68,7 @@ const Simulator = () => {
 
       <section className="simulator-grid">
         <article className="panel-card">
-          <div className="panel-title">
-            <span>Operating Mode</span>
-          </div>
+          <div className="simulator-section-title">Operating Mode</div>
           <div className="button-group">
             <button className={`btn btn-small ${mode === 'DAY' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMode('DAY')}>DAY MODE</button>
             <button className={`btn btn-small ${mode === 'NIGHT' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMode('NIGHT')}>NIGHT MODE</button>
@@ -81,34 +79,50 @@ const Simulator = () => {
         </article>
 
         <article className="panel-card">
-          <div className="panel-title">
-            <span>Telemetry</span>
+          <div className="simulator-section-title">Simulator Status</div>
+          <div className="simulator-state-item">
+            <span className="simulator-state-label">Status</span>
+            <span className={`simulator-state-value ${status === 'RUNNING' ? 'green' : 'red'}`}>{status}</span>
           </div>
-          <div className="telemetry-status">
-            <span className="mini-label">Simulator Status</span>
-            <span className="chip chip-green">{status}</span>
-          </div>
-          <div className="telemetry-status">
-            <span className="mini-label">Telemetry Interval</span>
-            <span className="chip chip-blue">{Math.round(interval / 1000)} seconds</span>
+          <div className="simulator-state-item">
+            <span className="simulator-state-label">Telemetry</span>
+            <span className="simulator-state-value">Every {Math.round(interval / 1000)} seconds</span>
           </div>
           <div className="button-group mt-4">
             <button className="btn btn-primary" onClick={() => { setStatus('RUNNING'); addLog('Simulator started'); demoTrigger('start'); }}>Start Simulator</button>
             <button className="btn btn-secondary" onClick={() => { setStatus('STOPPED'); addLog('Simulator stopped'); demoTrigger('stop'); }}>Stop Simulator</button>
-            <button className="btn btn-danger" onClick={() => { addLog('Demo reset'); demoTrigger('clear'); }}>Reset Demo</button>
+            <button className="btn btn-danger" onClick={() => { addLog('Demo reset'); demoTrigger('clear'); }}>Reset All</button>
           </div>
         </article>
 
         <article className="panel-card">
-          <div className="panel-title">
-            <span>DEMO FAULT SIMULATIONS</span>
-          </div>
+          <div className="simulator-section-title">Fault Scenarios</div>
           <div className="button-group vertical">
-            <button className="btn btn-danger" onClick={() => demoTrigger('lampFailure')}>Trigger SL-003 Lamp Failure</button>
-            <button className="btn btn-warning" onClick={() => demoTrigger('deviceOffline')}>Trigger SL-004 Device Offline</button>
-            <button className="btn btn-warning" onClick={() => demoTrigger('lowCurrent')}>Trigger SL-005 Low Current</button>
+            <button className="btn btn-danger" onClick={() => demoTrigger('lampFailure')}>SL-003 Lamp Failure</button>
+            <button className="btn btn-warning" onClick={() => demoTrigger('deviceOffline')}>SL-004 Device Offline</button>
+            <button className="btn btn-warning" onClick={() => demoTrigger('lowCurrent')}>SL-005 Low Current</button>
           </div>
         </article>
+      </section>
+
+      <section className="panel-card" style={{ marginBottom: 14 }}>
+        <div className="panel-title">
+          <span>Current Demo State</span>
+        </div>
+        <div className="simulator-state-grid" style={{ margin: 0 }}>
+          <div className="simulator-state-item">
+            <span className="simulator-state-label">Operating Mode</span>
+            <span className="simulator-state-value">{mode}</span>
+          </div>
+          <div className="simulator-state-item">
+            <span className="simulator-state-label">Simulator</span>
+            <span className={`simulator-state-value ${status === 'RUNNING' ? 'green' : 'red'}`}>{status}</span>
+          </div>
+          <div className="simulator-state-item">
+            <span className="simulator-state-label">Telemetry Interval</span>
+            <span className="simulator-state-value">{Math.round(interval / 1000)} seconds</span>
+          </div>
+        </div>
       </section>
 
       <section className="panel-card">

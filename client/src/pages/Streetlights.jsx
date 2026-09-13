@@ -41,11 +41,11 @@ const Streetlights = () => {
 
   return (
     <div className="page-wrap">
-      <section className="page-heading">
+      <section className="section-header">
         <div>
           <span className="eyebrow">Infrastructure</span>
-          <h1 className="page-title">Streetlights</h1>
-          <p className="page-subtitle">Registered IoT streetlight infrastructure</p>
+          <h1 className="section-header-title">Streetlights</h1>
+          <p className="section-header-subtitle">View and manage all streetlights</p>
         </div>
       </section>
 

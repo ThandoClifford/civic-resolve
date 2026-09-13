@@ -22,7 +22,6 @@ const ROLE_NAV = {
     { to: '/faults', label: 'Faults', icon: '⚠' },
     { to: '/maintenance', label: 'Maintenance', icon: '✓' },
     { to: '/simulator', label: 'Simulator', icon: '⟳' },
-    { to: '/users', label: 'Users', icon: '♙' },
     { to: '/settings', label: 'Settings', icon: '⚙' }
   ]
 };

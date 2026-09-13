@@ -29,52 +29,68 @@ const Login = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-12">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-        <h1 className="text-3xl font-bold text-slate-800">Login</h1>
-        <p className="text-slate-600 mt-2">Access CivicResolve with your account</p>
+    <div className="app-shell">
+      <div className="login-left">
+        <div className="login-brand">
+          <span className="brand-mark">✦</span>
+          <span className="brand-name">CivicResolve</span>
+        </div>
+        <h2 className="login-tagline">Smarter Communities<br />Brighter Tomorrows</h2>
+        <ul className="login-points">
+          <li>Report issues</li>
+          <li>Monitor infrastructure</li>
+          <li>Improve response times</li>
+          <li>Build safer communities</li>
+        </ul>
+        <p className="login-footer">An AI-powered civic issue reporting and management platform</p>
+      </div>
+      <div className="login-right">
+        <div className="login-card">
+          <h1 className="login-title">Welcome Back</h1>
+          <p className="login-subtitle">Sign in to your CivicResolve account</p>
 
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Signing in...' : 'Login'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div>
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className="form-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                className="form-input"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary w-full"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
 
-        <p className="mt-6 text-sm text-slate-600">
-          Need an account? <Link to="/register" className="font-medium text-blue-600">Register</Link>
-        </p>
+          <p className="mt-6 text-sm text-slate-600">
+            Need an account? <Link to="/register" className="font-medium text-blue-600">Register</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

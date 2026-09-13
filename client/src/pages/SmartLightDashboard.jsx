@@ -230,255 +230,228 @@ const SmartLightDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">CivicResolve SmartLight</h1>
-            <p className="text-slate-600">Live Streetlight Monitoring</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                socketConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              {socketConnected ? 'LIVE' : 'OFFLINE'}
-            </span>
-          </div>
+    <div className="page-wrap">
+      <section className="section-header">
+        <div>
+          <span className="eyebrow">SmartLight Monitoring</span>
+          <h1 className="section-header-title">SmartLight</h1>
+          <p className="section-header-subtitle">Real-time IoT streetlight monitoring and control</p>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Streetlights</div>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{streetlights.length}</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">Operational</div>
-            <div className="text-2xl font-bold text-green-700 mt-1">{operationalCount}</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">Attention Needed</div>
-            <div className="text-2xl font-bold text-amber-700 mt-1">{attentionCount + offlineCount}</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">Critical Faults</div>
-            <div className="text-2xl font-bold text-red-700 mt-1">{criticalCount}</div>
-          </div>
+        <div className="page-controls">
+          <span className="filter-label">Operating Mode</span>
+          <select value="NIGHT" className="form-input compact-select">
+            <option>DAY</option>
+            <option>NIGHT</option>
+          </select>
         </div>
+      </section>
 
-        {alerts.length > 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-6">
-            <div className="px-4 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-semibold text-slate-800">Alerts</h2>
+      <section className="summary-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(140px, 1fr))' }}>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Total Devices</span>
+            <span className="summary-icon tone-blue">◉</span>
+          </div>
+          <div className="summary-value">{streetlights.length}</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Online</span>
+            <span className="summary-icon tone-green">●</span>
+          </div>
+          <div className="summary-value green">{operationalCount}</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Active Faults</span>
+            <span className="summary-icon tone-red">⚠</span>
+          </div>
+          <div className="summary-value red">{attentionCount + offlineCount}</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Critical</span>
+            <span className="summary-icon tone-red">▲</span>
+          </div>
+          <div className="summary-value red">{criticalCount}</div>
+        </div>
+      </section>
+
+      {alerts.length > 0 && (
+        <section className="panel-card" style={{ marginBottom: 14 }}>
+          <div className="panel-title">
+            <span>Active Alerts</span>
+            <span className="chip chip-red">{alerts.length}</span>
+          </div>
+          <div className="space-y-2">
+            {alerts.slice(0, 5).map((alert, index) => {
+              const isCritical = alert.priorityLevel === 'CRITICAL';
+              return (
+                <div key={`${alert.faultId}-${alert.createdAt}-${index}`} className={`rounded-lg border p-3 ${isCritical ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-slate-900">{alert.streetlightId}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded text-white ${isCritical ? 'bg-red-600' : 'bg-amber-600'}`}>
+                      {alert.priorityLevel}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-600 mb-1">{alert.streetlightName} • {alert.areaName}</div>
+                  <div className="text-xs text-slate-700 font-medium mb-1">{alert.faultType?.replace('_', ' ')}</div>
+                  <div className="text-xs text-slate-500">Score: {alert.priorityScore ?? '--'}/100 • {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div className="lg:col-span-2 panel-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800">Live Map</h2>
+            <div className="map-legend">
+              <span><span className="map-legend-dot" style={{ background: '#16a34a' }} />ONLINE</span>
+              <span><span className="map-legend-dot" style={{ background: '#f59e0b' }} />WARNING</span>
+              <span><span className="map-legend-dot" style={{ background: '#dc2626' }} />FAULT</span>
+              <span><span className="map-legend-dot" style={{ background: '#475569' }} />OFFLINE</span>
             </div>
-            <div className="max-h-64 overflow-y-auto p-4 space-y-2">
-              {alerts.map((alert, index) => {
-                const isCritical = alert.priorityLevel === 'CRITICAL';
+          </div>
+          <div className="relative w-full" style={{ height: '26rem' }}>
+            <MapContainer center={FALLBACK_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <MapAutoBounds points={mapPoints} />
+              {mapPoints.map((point) => (
+                <CircleMarker
+                  key={point.id}
+                  center={[point.lat, point.lng]}
+                  radius={8}
+                  pathOptions={{
+                    color: '#0f172a',
+                    weight: 1,
+                    fillColor: STATUS_COLORS[point.deviceStatus] || '#475569',
+                    fillOpacity: 0.9
+                  }}
+                >
+                  <Popup>
+                    <div className="space-y-1 min-w-48">
+                      <div className="font-semibold text-slate-800">{point.streetlightId}</div>
+                      <div className="text-sm text-slate-600">{point.name}</div>
+                      <div className="text-sm text-slate-600">Area: {point.areaName}</div>
+                      <div className="text-sm text-slate-600">Type: {point.installationType?.replace('_', ' ')}</div>
+                      <div className="text-sm text-slate-600">Status: {point.deviceStatus}</div>
+                      <div className="text-sm text-slate-600">Lamp: {point.currentLampState}</div>
+                      <div className="text-sm text-slate-600">Voltage: {point.voltage ?? '--'}V</div>
+                      <div className="text-sm text-slate-600">Current: {point.current ?? '--'}A</div>
+                      <div className="text-sm text-slate-600">Last Seen: {formatLastSeen(point.lastSeen)}</div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              ))}
+            </MapContainer>
+          </div>
+        </div>
+
+        <div className="panel-card flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <h2 className="text-sm font-semibold text-slate-800">Active Faults</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {faults.length === 0 ? (
+              <div className="text-sm text-slate-500">No active streetlight faults detected.</div>
+            ) : (
+              faults.map((fault) => {
+                const priorityColor = PRIORITY_COLORS[fault.priorityLevel] || '#475569';
                 return (
                   <div
-                    key={`${alert.faultId}-${alert.createdAt}-${index}`}
-                    className={`rounded-lg border p-3 ${
-                      isCritical
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-amber-50 border-amber-200'
-                    }`}
+                    key={fault._id || fault.id}
+                    className="border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-blue-400 transition-colors"
+                    onClick={() => setSelectedFault(fault)}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-slate-900">{alert.streetlightId}</span>
+                      <div className="text-sm font-semibold text-slate-900">{fault.streetlightId}</div>
                       <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded text-white ${
-                          isCritical ? 'bg-red-600' : 'bg-amber-600'
-                        }`}
+                        className="text-xs font-semibold px-2 py-0.5 rounded text-white"
+                        style={{ backgroundColor: priorityColor }}
                       >
-                        {alert.priorityLevel}
+                        {fault.priorityLevel}
                       </span>
                     </div>
                     <div className="text-xs text-slate-600 mb-1">
-                      {alert.streetlightName} • {alert.areaName}
+                      {fault.streetlight?.name || '--'} • {fault.streetlight?.location?.areaName || '--'}
                     </div>
-                    <div className="text-xs text-slate-700 font-medium mb-1">{alert.faultType?.replace('_', ' ')}</div>
-                    <div className="text-xs text-slate-500">
-                      Score: {alert.priorityScore ?? '--'}/100 • {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="text-xs text-slate-700 font-medium mb-1">{fault.faultType?.replace('_', ' ')}</div>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>Score: {fault.priorityScore ?? '--'}/100</span>
+                      <span>{fault.occurrenceCount ?? 1} detections</span>
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          </div>
-        )}
-
-        {escalations.length > 0 && user?.role === 'ADMIN' && (
-          <div className="bg-white rounded-xl border border-red-200 shadow-sm mb-6">
-            <div className="px-4 py-3 border-b border-red-200">
-              <h2 className="text-sm font-semibold text-red-800">Escalations</h2>
-            </div>
-            <div className="max-h-64 overflow-y-auto p-4 space-y-2">
-              {escalations.map((escalation, index) => (
-                <div
-                  key={`${escalation.faultId}-${escalation.escalatedAt}-${index}`}
-                  className="rounded-lg border border-red-200 bg-red-50 p-3"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-slate-900">{escalation.streetlightId}</span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded text-white bg-red-600">
-                      ESCALATED
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-600 mb-1">
-                    {escalation.streetlightName} • {escalation.areaName}
-                  </div>
-                  <div className="text-xs text-slate-700 font-medium mb-1">{escalation.faultType?.replace('_', ' ')}</div>
-                  <div className="text-xs text-slate-500">
-                    Score: {escalation.priorityScore ?? '--'}/100 • {new Date(escalation.escalatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-semibold text-slate-800">Live Map</h2>
-            </div>
-            <div className="relative w-full h-[28rem] bg-slate-900">
-              <MapContainer center={FALLBACK_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <MapAutoBounds points={mapPoints} />
-                {mapPoints.map((point) => (
-                  <CircleMarker
-                    key={point.id}
-                    center={[point.lat, point.lng]}
-                    radius={8}
-                    pathOptions={{
-                      color: '#0f172a',
-                      weight: 1,
-                      fillColor: STATUS_COLORS[point.deviceStatus] || '#475569',
-                      fillOpacity: 0.9
-                    }}
-                  >
-                    <Popup>
-                      <div className="space-y-1 min-w-48">
-                        <div className="font-semibold text-slate-800">{point.streetlightId}</div>
-                        <div className="text-sm text-slate-600">{point.name}</div>
-                        <div className="text-sm text-slate-600">Area: {point.areaName}</div>
-                        <div className="text-sm text-slate-600">Type: {point.installationType?.replace('_', ' ')}</div>
-                        <div className="text-sm text-slate-600">Status: {point.deviceStatus}</div>
-                        <div className="text-sm text-slate-600">Lamp: {point.currentLampState}</div>
-                        <div className="text-sm text-slate-600">Voltage: {point.voltage ?? '--'}V</div>
-                        <div className="text-sm text-slate-600">Current: {point.current ?? '--'}A</div>
-                        <div className="text-sm text-slate-600">Last Seen: {formatLastSeen(point.lastSeen)}</div>
-                      </div>
-                    </Popup>
-                  </CircleMarker>
-                ))}
-              </MapContainer>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
-            <div className="px-4 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-semibold text-slate-800">Active Faults</h2>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {faults.length === 0 ? (
-                <div className="text-sm text-slate-500">No active streetlight faults detected.</div>
-              ) : (
-                faults.map((fault) => {
-                  const priorityColor = PRIORITY_COLORS[fault.priorityLevel] || '#475569';
-                  return (
-                    <div
-                      key={fault._id || fault.id}
-                      className="border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-blue-400 transition-colors"
-                      onClick={() => setSelectedFault(fault)}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="text-sm font-semibold text-slate-900">{fault.streetlightId}</div>
-                        <span
-                          className="text-xs font-semibold px-2 py-0.5 rounded text-white"
-                          style={{ backgroundColor: priorityColor }}
-                        >
-                          {fault.priorityLevel}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-600 mb-1">
-                        {fault.streetlight?.name || '--'} • {fault.streetlight?.location?.areaName || '--'}
-                      </div>
-                      <div className="text-xs text-slate-700 font-medium mb-1">{fault.faultType?.replace('_', ' ')}</div>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>Score: {fault.priorityScore ?? '--'}/100</span>
-                        <span>{fault.occurrenceCount ?? 1} detections</span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-800">Streetlight Status</h2>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-sm border border-slate-300 rounded-lg px-2 py-1"
-            >
-              <option value="ALL">All</option>
-              <option value="ONLINE">Online</option>
-              <option value="WARNING">Warning</option>
-              <option value="FAULT">Fault</option>
-              <option value="OFFLINE">Offline</option>
-            </select>
-          </div>
-          <div className="overflow-x-auto">
-            {filteredStreetlights.length === 0 ? (
-              <div className="p-6 text-sm text-slate-500">No streetlight data available.</div>
-            ) : (
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-4 py-2 text-left">ID</th>
-                    <th className="px-4 py-2 text-left">Name</th>
-                    <th className="px-4 py-2 text-left">Area</th>
-                    <th className="px-4 py-2 text-left">Lamp</th>
-                    <th className="px-4 py-2 text-left">Status</th>
-                    <th className="px-4 py-2 text-left">Voltage</th>
-                    <th className="px-4 py-2 text-left">Current</th>
-                    <th className="px-4 py-2 text-left">Last Seen</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredStreetlights.map((sl) => (
-                    <tr key={sl._id || sl.streetlightId}>
-                      <td className="px-4 py-2 font-medium text-slate-900">{sl.streetlightId}</td>
-                      <td className="px-4 py-2 text-slate-700">{sl.name || '--'}</td>
-                      <td className="px-4 py-2 text-slate-700">{sl.location?.areaName || '--'}</td>
-                      <td className="px-4 py-2 text-slate-700">{sl.currentLampState || '--'}</td>
-                      <td className="px-4 py-2">
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold text-white"
-                          style={{ backgroundColor: STATUS_COLORS[sl.deviceStatus] || '#475569' }}
-                        >
-                          {sl.deviceStatus || 'UNKNOWN'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-slate-700">{sl.voltage ?? '--'}V</td>
-                      <td className="px-4 py-2 text-slate-700">{sl.current ?? '--'}A</td>
-                      <td className="px-4 py-2 text-slate-700">{formatLastSeen(sl.lastSeen)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              })
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-800">Streetlight Status</h2>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-sm border border-slate-300 rounded-lg px-2 py-1"
+          >
+            <option value="ALL">All</option>
+            <option value="ONLINE">Online</option>
+            <option value="WARNING">Warning</option>
+            <option value="FAULT">Fault</option>
+            <option value="OFFLINE">Offline</option>
+          </select>
+        </div>
+        <div className="overflow-x-auto">
+          {filteredStreetlights.length === 0 ? (
+            <div className="p-6 text-sm text-slate-500">No streetlight data available.</div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Area</th>
+                  <th>Lamp</th>
+                  <th>Status</th>
+                  <th>Voltage</th>
+                  <th>Current</th>
+                  <th>Last Seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStreetlights.map((sl) => (
+                  <tr key={sl._id || sl.streetlightId}>
+                    <td className="font-medium text-slate-900">{sl.streetlightId}</td>
+                    <td>{sl.name || '--'}</td>
+                    <td>{sl.location?.areaName || '--'}</td>
+                    <td>{sl.currentLampState || '--'}</td>
+                    <td>
+                      <span
+                        className="status-pill"
+                        style={{
+                          background: STATUS_COLORS[sl.deviceStatus] || '#475569',
+                          color: '#fff'
+                        }}
+                      >
+                        {sl.deviceStatus || 'UNKNOWN'}
+                      </span>
+                    </td>
+                    <td>{sl.voltage ?? '--'}V</td>
+                    <td>{sl.current ?? '--'}A</td>
+                    <td>{formatLastSeen(sl.lastSeen)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

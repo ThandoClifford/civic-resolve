@@ -59,27 +59,23 @@ const Dashboard = () => {
 
   const cards = useMemo(() => {
     const activeComplaints = complaints.filter((c) => c.status !== 'resolved').length;
-    const cardsOut = [
-      { label: 'Total Complaints', value: complaints.length, tone: 'blue', text: 'Citizen issues' },
-      { label: 'Active Complaints', value: activeComplaints, tone: 'amber', text: 'Open service requests' }
-    ];
-
-    if (!canLoadMunicipalData) {
-      return cardsOut;
-    }
-
     const unresolvedFaults = faults.filter((f) => ['DETECTED', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS'].includes(f.status));
     const criticalFaults = faults.filter((f) => f.priorityLevel === 'CRITICAL' && ['DETECTED', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS'].includes(f.status));
     const onlineStreetlights = streetlights.filter((s) => s.deviceStatus === 'ONLINE').length;
-    const maintenanceTasks = unresolvedFaults.length;
 
-    return cardsOut.concat([
-      { label: 'Total Streetlights', value: streetlights.length, tone: 'blue', text: 'IoT inventory' },
-      { label: 'Streetlights Online', value: onlineStreetlights, tone: 'green', text: 'Operational assets' },
-      { label: 'Active SmartLight Faults', value: unresolvedFaults.length, tone: 'red', text: 'Telemetry-detected' },
-      { label: 'Critical Faults', value: criticalFaults.length, tone: 'red', text: 'Escalation required' },
-      { label: 'Maintenance Tasks', value: maintenanceTasks, tone: 'orange', text: 'Open workflow' }
-    ]);
+    if (!canLoadMunicipalData) {
+      return [
+        { label: 'Total Complaints', value: complaints.length, tone: 'blue' },
+        { label: 'Active Complaints', value: activeComplaints, tone: 'amber' }
+      ];
+    }
+
+    return [
+      { label: 'Total Complaints', value: complaints.length, tone: 'blue' },
+      { label: 'Total Streetlights', value: streetlights.length, tone: 'blue' },
+      { label: 'Active Faults', value: unresolvedFaults.length, tone: 'red' },
+      { label: 'Maintenance Tasks', value: unresolvedFaults.length, tone: 'amber' }
+    ];
   }, [complaints, streetlights, faults, canLoadMunicipalData]);
 
   const activity = useMemo(() => {
@@ -106,11 +102,10 @@ const Dashboard = () => {
 
   return (
     <div className="page-wrap">
-      <section className="page-heading">
+      <section className="section-header">
         <div>
           <span className="eyebrow">Operations Dashboard</span>
-          <h1 className="page-title">CivicResolve Dashboard</h1>
-          <p className="page-subtitle">What is happening in CivicResolve right now?</p>
+          <h1 className="section-header-title">Dashboard</h1>
         </div>
         <div className="header-right">
           <span className="live-indicator"><span /> Live</span>
@@ -131,13 +126,12 @@ const Dashboard = () => {
               <span className={`summary-icon tone-${card.tone}`}>↗</span>
             </div>
             <div className="summary-value">{card.value}</div>
-            <div className="summary-text">{card.text}</div>
           </article>
         ))}
       </section>
 
       <section className="dashboard-grid">
-        <article className="panel-card panel-span-2">
+        <article className="panel-card">
           <div className="panel-title">
             <span>Recent Activity</span>
             <span className="chip chip-blue">Unified view</span>
