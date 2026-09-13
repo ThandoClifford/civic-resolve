@@ -1,11 +1,20 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const AppShell = ({ children }) => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const location = useLocation();
-
-  const nav = [
+const ROLE_NAV = {
+  CITIZEN: [
+    { to: '/', label: 'Dashboard', icon: '▦' },
+    { to: '/complaints', label: 'Complaints', icon: '✎' }
+  ],
+  MUNICIPAL_OFFICIAL: [
+    { to: '/', label: 'Dashboard', icon: '▦' },
+    { to: '/complaints', label: 'Complaints', icon: '✎' },
+    { to: '/smartlight', label: 'SmartLight', icon: '☼' },
+    { to: '/streetlights', label: 'Streetlights', icon: '◉' },
+    { to: '/faults', label: 'Faults', icon: '⚠' },
+    { to: '/maintenance', label: 'Maintenance', icon: '✓' }
+  ],
+  ADMIN: [
     { to: '/', label: 'Dashboard', icon: '▦' },
     { to: '/complaints', label: 'Complaints', icon: '✎' },
     { to: '/smartlight', label: 'SmartLight', icon: '☼' },
@@ -13,10 +22,18 @@ const AppShell = ({ children }) => {
     { to: '/faults', label: 'Faults', icon: '⚠' },
     { to: '/maintenance', label: 'Maintenance', icon: '✓' },
     { to: '/simulator', label: 'Simulator', icon: '⟳' },
-    { to: '/pots', label: 'POTS', icon: '⌕' },
     { to: '/users', label: 'Users', icon: '♙' },
     { to: '/settings', label: 'Settings', icon: '⚙' }
-  ];
+  ]
+};
+
+const FALLBACK_NAV = ROLE_NAV.CITIZEN;
+
+const AppShell = ({ children }) => {
+  const { user, isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+
+  const nav = ROLE_NAV[user?.role] || FALLBACK_NAV;
 
   return (
     <div className="app-shell">
