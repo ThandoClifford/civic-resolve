@@ -62,9 +62,9 @@ const Landing = () => {
             <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center text-3xl mb-5">
               📊
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">Review Analytics</h3>
+            <h3 className="text-xl font-bold text-white mb-3">Fault Detection</h3>
             <p className="text-blue-200">
-              Monitor reporting patterns and response activity through the available analytics views.
+              IoT-Based Streetlight Fault Detection and Maintenance Prioritisation System
             </p>
           </div>
         </div>

@@ -1,19 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getFaults, updateFaultStatus } from '../services/api';
+
+const ACTIVE_STATUSES = ['DETECTED', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS'];
 
 const Faults = () => {
   const [faults, setFaults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState('Active');
   const [priorityFilter, setPriorityFilter] = useState('All');
 
   useEffect(() => {
     const fetchFaults = async () => {
       try {
         const params = {};
-        if (filter !== 'All') params.status = filter;
-        const response = await getFaults(params);
+        if (filter !== 'Active' && filter !== 'All') {
+          params.status = filter;
+        }
+        const response = await getFaults(Object.keys(params).length ? params : undefined);
         setFaults(response.data.faults || []);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load faults');
@@ -27,11 +31,33 @@ const Faults = () => {
 
   const filteredFaults = useMemo(() => {
     let result = faults;
+    if (filter === 'Active') {
+      result = result.filter((f) => ACTIVE_STATUSES.includes(f.status));
+    } else if (filter !== 'All') {
+      result = result.filter((f) => f.status === filter);
+    }
     if (priorityFilter !== 'All') {
       result = result.filter((f) => f.priorityLevel === priorityFilter);
     }
     return result;
-  }, [faults, priorityFilter]);
+  }, [faults, filter, priorityFilter]);
+
+  const summary = useMemo(() => {
+    const activeFaults = faults.filter((f) => ACTIVE_STATUSES.includes(f.status));
+    const critical = activeFaults.filter((f) => f.priorityLevel === 'CRITICAL').length;
+    const today = new Date().toDateString();
+    const resolvedToday = faults.filter((f) => {
+      if (f.status !== 'RESOLVED') return false;
+      const resolvedDate = f.resolvedAt || f.lastDetectedAt || f.updatedAt;
+      return resolvedDate ? new Date(resolvedDate).toDateString() === today : false;
+    }).length;
+    return {
+      active: activeFaults.length,
+      resolvedToday,
+      critical,
+      total: faults.length
+    };
+  }, [faults]);
 
   const updateStatus = async (id, status) => {
     try {
@@ -57,11 +83,12 @@ const Faults = () => {
         <div>
           <span className="eyebrow">SmartLight Fault Registry</span>
           <h1 className="section-header-title">Faults</h1>
-          <p className="section-header-subtitle">Detected issues and their status</p>
+          <p className="section-header-subtitle">Central fault management and resolution</p>
         </div>
         <div className="page-controls">
           <label className="filter-label">Status</label>
           <select value={filter} onChange={(e) => setFilter(e.target.value)} className="form-input compact-select">
+            <option>Active</option>
             <option>All</option>
             <option>DETECTED</option>
             <option>ACKNOWLEDGED</option>
@@ -78,9 +105,40 @@ const Faults = () => {
         </div>
       </section>
 
+      <section className="summary-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(140px, 1fr))' }}>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Active Faults</span>
+            <span className="summary-icon tone-red">⚠</span>
+          </div>
+          <div className="summary-value red">{summary.active}</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Resolved Today</span>
+            <span className="summary-icon tone-green">✓</span>
+          </div>
+          <div className="summary-value green">{summary.resolvedToday}</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Critical</span>
+            <span className="summary-icon tone-red">▲</span>
+          </div>
+          <div className="summary-value red">{summary.critical}</div>
+        </div>
+        <div className="summary-card">
+          <div className="summary-card-top">
+            <span className="summary-label">Total Records</span>
+            <span className="summary-icon tone-blue">◉</span>
+          </div>
+          <div className="summary-value">{summary.total}</div>
+        </div>
+      </section>
+
       <section className="panel-card">
         <div className="panel-title">
-          <span>Fault Stream</span>
+          <span>Fault Registry</span>
           <span className="chip chip-red">{filteredFaults.length} records</span>
         </div>
         <div className="table-wrap">
@@ -89,12 +147,14 @@ const Faults = () => {
               <tr>
                 <th>Fault ID</th>
                 <th>Streetlight</th>
-                <th>Area</th>
+                <th>Location</th>
                 <th>Fault Type</th>
                 <th>Priority</th>
                 <th>Score</th>
+                <th>Detections</th>
                 <th>Status</th>
-                <th>Date</th>
+                <th>Detected</th>
+                <th>Last Detected</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -107,8 +167,10 @@ const Faults = () => {
                   <td>{fault.faultType?.replace('_', ' ')}</td>
                   <td><span className={`priority-pill priority-${String(fault.priorityLevel || '').toLowerCase()}`}>{fault.priorityLevel || '--'}</span></td>
                   <td>{fault.priorityScore ?? '--'}</td>
+                  <td>{fault.occurrenceCount ?? 1}</td>
                   <td><span className={`status-pill status-${fault.status}`}>{fault.status}</span></td>
                   <td>{fault.detectedAt ? new Date(fault.detectedAt).toLocaleDateString() : '--'}</td>
+                  <td>{fault.lastDetectedAt ? new Date(fault.lastDetectedAt).toLocaleDateString() : '--'}</td>
                   <td>
                     <div className="row-actions">
                       {fault.status !== 'RESOLVED' && 

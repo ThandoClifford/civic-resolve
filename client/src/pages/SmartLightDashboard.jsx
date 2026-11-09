@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import { useAuth } from '../context/AuthContext';
 import { useSmartLightSocket } from '../hooks/useSmartLightSocket';
-import { getStreetlights, getFaults, updateFaultStatus } from '../services/api';
+import { getStreetlights, getFaults } from '../services/api';
+import { getStreetlightDisplayInfo } from '../utils/streetlightColors';
 
 const STATUS_COLORS = {
   ONLINE: '#16a34a',
@@ -16,14 +17,6 @@ const PRIORITY_COLORS = {
   HIGH: '#dc2626',
   MEDIUM: '#f59e0b',
   LOW: '#16a34a'
-};
-
-const ALLOWED_TRANSITIONS = {
-  DETECTED: ['ACKNOWLEDGED'],
-  ACKNOWLEDGED: ['ASSIGNED'],
-  ASSIGNED: ['IN_PROGRESS'],
-  IN_PROGRESS: ['RESOLVED'],
-  RESOLVED: []
 };
 
 const FALLBACK_CENTER = [-26.1865, 28.0045];
@@ -67,7 +60,6 @@ const SmartLightDashboard = () => {
   const [faults, setFaults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedFault, setSelectedFault] = useState(null);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [toast, setToast] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
@@ -142,9 +134,6 @@ const SmartLightDashboard = () => {
     },
     onFaultResolved: (data) => {
       setFaults((prev) => prev.filter((f) => (f._id || f.id) !== data.id));
-      if (selectedFault && (selectedFault._id || selectedFault.id) === data.id) {
-        setSelectedFault(null);
-      }
     },
     onAlert: (data) => {
       handleAlert(data);
@@ -156,20 +145,6 @@ const SmartLightDashboard = () => {
     onDisconnect: () => setSocketConnected(false)
   });
 
-  const handleStatusUpdate = async (faultId, newStatus) => {
-    try {
-      const res = await updateFaultStatus(faultId, { status: newStatus });
-      setFaults((prev) =>
-        prev.map((f) => ((f._id || f.id) === faultId ? res.data.fault : f))
-      );
-      if (selectedFault && (selectedFault._id || selectedFault.id) === faultId) {
-        setSelectedFault(res.data.fault);
-      }
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update fault status');
-    }
-  };
-
   const filteredStreetlights = useMemo(() => {
     if (statusFilter === 'ALL') return streetlights;
     return streetlights.filter((sl) => sl.deviceStatus === statusFilter);
@@ -178,30 +153,32 @@ const SmartLightDashboard = () => {
   const mapPoints = useMemo(() => {
     return streetlights
       .filter((sl) => Number.isFinite(sl.location?.coordinates?.latitude) && Number.isFinite(sl.location?.coordinates?.longitude))
-      .map((sl) => ({
-        id: sl._id || sl.streetlightId,
-        streetlightId: sl.streetlightId,
-        name: sl.name,
-        areaName: sl.location?.areaName || 'Unknown area',
-        installationType: sl.installationType,
-        currentLampState: sl.currentLampState,
-        deviceStatus: sl.deviceStatus,
-        voltage: sl.voltage,
-        current: sl.current,
-        lastSeen: sl.lastSeen,
-        lat: sl.location.coordinates.latitude,
-        lng: sl.location.coordinates.longitude
-      }));
+      .map((sl) => {
+        const displayInfo = getStreetlightDisplayInfo(sl);
+
+        return {
+          id: sl._id || sl.streetlightId,
+          streetlightId: sl.streetlightId,
+          name: sl.name,
+          areaName: sl.location?.areaName || 'Unknown area',
+          installationType: sl.installationType,
+          currentLampState: sl.currentLampState,
+          deviceStatus: sl.deviceStatus,
+          voltage: sl.voltage,
+          current: sl.current,
+          lastSeen: sl.lastSeen,
+          lat: sl.location.coordinates.latitude,
+          lng: sl.location.coordinates.longitude,
+          displayColor: displayInfo.color,
+          displayLabel: displayInfo.label
+        };
+      });
   }, [streetlights]);
 
   const operationalCount = streetlights.filter((sl) => sl.deviceStatus === 'ONLINE').length;
   const attentionCount = streetlights.filter((sl) => sl.deviceStatus === 'WARNING' || sl.deviceStatus === 'FAULT').length;
   const offlineCount = streetlights.filter((sl) => sl.deviceStatus === 'OFFLINE').length;
   const criticalCount = faults.filter((f) => f.priorityLevel === 'CRITICAL').length;
-
-  const getNextStatuses = (status) => {
-    return ALLOWED_TRANSITIONS[status] || [];
-  };
 
   if (!isOfficial) {
     return (
@@ -309,10 +286,11 @@ const SmartLightDashboard = () => {
           <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-800">Live Map</h2>
             <div className="map-legend">
-              <span><span className="map-legend-dot" style={{ background: '#16a34a' }} />ONLINE</span>
-              <span><span className="map-legend-dot" style={{ background: '#f59e0b' }} />WARNING</span>
-              <span><span className="map-legend-dot" style={{ background: '#dc2626' }} />FAULT</span>
-              <span><span className="map-legend-dot" style={{ background: '#475569' }} />OFFLINE</span>
+              <span><span className="map-legend-dot" style={{ background: '#7dd3fc' }} />Day mode normal</span>
+              <span><span className="map-legend-dot" style={{ background: '#16a34a' }} />Night mode normal</span>
+              <span><span className="map-legend-dot" style={{ background: '#dc2626' }} />Lamp failure</span>
+              <span><span className="map-legend-dot" style={{ background: '#475569' }} />Device offline</span>
+              <span><span className="map-legend-dot" style={{ background: '#f59e0b' }} />Low current</span>
             </div>
           </div>
           <div className="relative w-full" style={{ height: '26rem' }}>
@@ -330,7 +308,7 @@ const SmartLightDashboard = () => {
                   pathOptions={{
                     color: '#0f172a',
                     weight: 1,
-                    fillColor: STATUS_COLORS[point.deviceStatus] || '#475569',
+                    fillColor: point.displayColor || '#475569',
                     fillOpacity: 0.9
                   }}
                 >
@@ -353,45 +331,6 @@ const SmartLightDashboard = () => {
           </div>
         </div>
 
-        <div className="panel-card flex flex-col">
-          <div className="px-4 py-3 border-b border-slate-200">
-            <h2 className="text-sm font-semibold text-slate-800">Active Faults</h2>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {faults.length === 0 ? (
-              <div className="text-sm text-slate-500">No active streetlight faults detected.</div>
-            ) : (
-              faults.map((fault) => {
-                const priorityColor = PRIORITY_COLORS[fault.priorityLevel] || '#475569';
-                return (
-                  <div
-                    key={fault._id || fault.id}
-                    className="border border-slate-200 rounded-lg p-3 cursor-pointer hover:border-blue-400 transition-colors"
-                    onClick={() => setSelectedFault(fault)}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-sm font-semibold text-slate-900">{fault.streetlightId}</div>
-                      <span
-                        className="text-xs font-semibold px-2 py-0.5 rounded text-white"
-                        style={{ backgroundColor: priorityColor }}
-                      >
-                        {fault.priorityLevel}
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-600 mb-1">
-                      {fault.streetlight?.name || '--'} • {fault.streetlight?.location?.areaName || '--'}
-                    </div>
-                    <div className="text-xs text-slate-700 font-medium mb-1">{fault.faultType?.replace('_', ' ')}</div>
-                    <div className="flex items-center justify-between text-xs text-slate-500">
-                      <span>Score: {fault.priorityScore ?? '--'}/100</span>
-                      <span>{fault.occurrenceCount ?? 1} detections</span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="panel-card">
@@ -455,131 +394,6 @@ const SmartLightDashboard = () => {
         </div>
       </div>
 
-      {selectedFault && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Fault Detail</h3>
-              <button
-                onClick={() => setSelectedFault(null)}
-                className="text-slate-500 hover:text-slate-700"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <div className="text-sm font-medium text-slate-500">Streetlight</div>
-                <div className="text-base font-semibold text-slate-900">{selectedFault.streetlightId}</div>
-                <div className="text-sm text-slate-700">{selectedFault.streetlight?.name || '--'}</div>
-                <div className="text-sm text-slate-700">{selectedFault.streetlight?.location?.areaName || '--'}</div>
-                <div className="text-sm text-slate-700">{selectedFault.streetlight?.installationType?.replace('_', ' ')}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-slate-500">Fault Type</div>
-                <div className="text-base font-semibold text-slate-900">{selectedFault.faultType?.replace('_', ' ')}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-slate-500">Status</div>
-                <div className="text-base font-semibold text-slate-900">{selectedFault.status?.replace('_', ' ')}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-slate-500">Priority</div>
-                <div className="text-base font-semibold text-slate-900">
-                  {selectedFault.priorityLevel} — {selectedFault.priorityScore ?? '--'}/100
-                </div>
-                <div className="mt-2 space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Fault Severity</span>
-                    <span className="font-medium text-slate-900">{selectedFault.priorityBreakdown?.faultSeverity ?? '--'}/40</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Location Sensitivity</span>
-                    <span className="font-medium text-slate-900">{selectedFault.priorityBreakdown?.locationSensitivity ?? '--'}/30</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Persistence</span>
-                    <span className="font-medium text-slate-900">{selectedFault.priorityBreakdown?.persistence ?? '--'}/15</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Duration</span>
-                    <span className="font-medium text-slate-900">{selectedFault.priorityBreakdown?.duration ?? '--'}/15</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-slate-500">Reason</div>
-                <div className="text-sm text-slate-700 mt-1">{selectedFault.priorityExplanation || '--'}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-slate-500">Detected At</div>
-                  <div className="font-medium text-slate-900">{selectedFault.detectedAt ? new Date(selectedFault.detectedAt).toLocaleString() : '--'}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Last Detected</div>
-                  <div className="font-medium text-slate-900">{selectedFault.lastDetectedAt ? new Date(selectedFault.lastDetectedAt).toLocaleString() : '--'}</div>
-                </div>
-                <div>
-                  <div className="text-slate-500">Occurrence Count</div>
-                  <div className="font-medium text-slate-900">{selectedFault.occurrenceCount ?? 1}</div>
-                </div>
-              </div>
-
-              {selectedFault.activity && selectedFault.activity.length > 0 && (
-                <div>
-                  <div className="text-sm font-medium text-slate-500 mb-2">Maintenance Timeline</div>
-                  <div className="space-y-2">
-                    {selectedFault.activity.map((entry, index) => (
-                      <div key={index} className="flex items-start gap-3 text-sm">
-                        <div className="text-xs text-slate-500 w-16 shrink-0">
-                          {entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
-                        </div>
-                        <div className="text-slate-700">
-                          {entry.action === 'FAULT_DETECTED' && (
-                            <span>Fault automatically detected</span>
-                          )}
-                          {entry.action === 'STATUS_CHANGED' && (
-                            <span>
-                              {entry.fromStatus?.replace('_', ' ')} → {entry.toStatus?.replace('_', ' ')}
-                              {entry.performedBy?.name ? ` by ${entry.performedBy.name}` : ''}
-                            </span>
-                          )}
-                          {!entry.action && (
-                            <span>
-                              {entry.fromStatus?.replace('_', ' ')} → {entry.toStatus?.replace('_', ' ')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedFault.status !== 'RESOLVED' && (
-                <div>
-                  <div className="text-sm font-medium text-slate-500 mb-2">Update Status</div>
-                  <div className="flex flex-wrap gap-2">
-                    {getNextStatuses(selectedFault.status).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => handleStatusUpdate(selectedFault._id || selectedFault.id, status)}
-                        className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
-                      >
-                        {status === 'ACKNOWLEDGED' && 'Acknowledge'}
-                        {status === 'ASSIGNED' && 'Assign'}
-                        {status === 'IN_PROGRESS' && 'Start Repair'}
-                        {status === 'RESOLVED' && 'Resolve'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {toast && (
         <div className="fixed bottom-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-lg text-sm">

@@ -4,7 +4,18 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { requireDeviceApiKey } = require('../middleware/deviceAuth');
 const { getState, setMode, applyScenario } = require('../services/demoStateService');
 
-router.get('/state', requireDeviceApiKey, async (req, res) => {
+const authenticateDemoState = (req, res, next) => {
+  const deviceKey = req.headers['x-device-api-key'];
+  const expectedKey = process.env.DEVICE_API_KEY;
+
+  if (expectedKey && deviceKey && deviceKey === expectedKey) {
+    return next();
+  }
+
+  return requireAuth(req, res, () => requireRole('ADMIN', 'MUNICIPAL_OFFICIAL')(req, res, next));
+};
+
+router.get('/state', authenticateDemoState, async (req, res) => {
   try {
     res.json({ success: true, state: getState() });
   } catch (error) {
@@ -24,8 +35,9 @@ router.post('/mode', requireAuth, requireRole('ADMIN'), async (req, res) => {
 
 router.post('/scenario', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
-    const { scenario } = req.body;
-    const result = await applyScenario(scenario);
+    const { scenario, type } = req.body;
+    const input = type ? `${scenario}:${type}` : scenario;
+    const result = await applyScenario(input);
     res.json(result);
   } catch (error) {
     res.status(400).json({ success: false, message: error.message || 'Server error applying scenario' });

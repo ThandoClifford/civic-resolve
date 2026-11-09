@@ -1258,3 +1258,105 @@ body {
   width: 100%;
   justify-content: center;
 }
+
+.sidebar-bottom-action {
+  padding: 10px 10px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.nav-link-simulator {
+  color: #f59e0b;
+  font-weight: 800;
+}
+
+.nav-link-simulator:hover,
+.nav-link-simulator.active {
+  color: white;
+  background: #b45309;
+}
+
+.simulator-state-value {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.simulator-streetlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.simulator-streetlight-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.simulator-streetlight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.simulator-streetlight-id {
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.simulator-scenario-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: white;
+}
+
+.chip-red {
+  background: #dc2626;
+}
+
+.chip-green {
+  background: #16a34a;
+}
+
+.simulator-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.simulator-live-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  margin-bottom: 8px;
+}
+
+.simulator-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.simulator-live-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

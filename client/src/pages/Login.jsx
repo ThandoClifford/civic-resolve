@@ -42,7 +42,6 @@ const Login = () => {
           <li>Improve response times</li>
           <li>Build safer communities</li>
         </ul>
-        <p className="login-footer">An AI-powered civic issue reporting and management platform</p>
       </div>
       <div className="login-right">
         <div className="login-card">

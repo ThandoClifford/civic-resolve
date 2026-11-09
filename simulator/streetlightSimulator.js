@@ -1,3 +1,24 @@
+const fs = require('fs');
+const path = require('path');
+
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf8').split('\n').forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) return;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  });
+}
+
 const API_URL = process.env.API_URL || 'http://localhost:5000';
 const DEVICE_API_KEY = process.env.DEVICE_API_KEY || '';
 const TELEMETRY_INTERVAL_MS = parseInt(process.env.TELEMETRY_INTERVAL_MS, 10) || 5000;
@@ -11,17 +32,7 @@ const STREETLIGHTS = [
 ];
 
 let simulationActive = true;
-let faultMode = {
-  SL003_LAMP_OFF: false,
-  SL004_DEVICE_OFFLINE: false,
-  SL005_LOW_CURRENT: false
-};
-
-const scenarioKeyMap = {
-  SL003_OFF: 'SL003_LAMP_OFF',
-  SL004_OFFLINE: 'SL004_DEVICE_OFFLINE',
-  SL005_LOW_CURRENT: 'SL005_LOW_CURRENT'
-};
+let streetlightScenarios = {};
 
 const randomVariation = (base, variance) => base + (Math.random() * variance * 2 - variance);
 
@@ -44,13 +55,11 @@ const syncDemoStateFromServer = async () => {
     }
 
     const payload = await response.json();
-    const active = payload?.state?.activeScenarios || {};
+    const scenarios = payload?.state?.scenarios || {};
     const operatingMode = String(payload?.state?.operatingMode || 'NIGHT').toUpperCase();
     const expectedLampState = operatingMode === 'DAY' ? 'OFF' : 'ON';
 
-    faultMode.SL003_LAMP_OFF = Boolean(active.SL003_OFF);
-    faultMode.SL004_DEVICE_OFFLINE = Boolean(active.SL004_OFFLINE);
-    faultMode.SL005_LOW_CURRENT = Boolean(active.SL005_LOW_CURRENT);
+    streetlightScenarios = { ...scenarios };
     simulationActive = payload?.state?.simulatorRunning !== false;
 
     STREETLIGHTS.forEach((streetlight) => {
@@ -62,24 +71,22 @@ const syncDemoStateFromServer = async () => {
 };
 
 const generateReading = (streetlight) => {
-  const isSL003 = streetlight.streetlightId === 'SL-003';
-  const isSL004 = streetlight.streetlightId === 'SL-004';
-  const isSL005 = streetlight.streetlightId === 'SL-005';
+  const scenario = streetlightScenarios[streetlight.streetlightId] || null;
 
   let lampState = streetlight.expectedLampState;
   let signalStatus = 'ONLINE';
   let voltage = randomVariation(230, 5);
   let current = 0;
 
-  if (isSL003 && faultMode.SL003_LAMP_OFF) {
+  if (scenario === 'LAMP_FAILURE') {
     lampState = 'OFF';
     current = randomVariation(0.02, 0.01);
-  } else if (isSL004 && faultMode.SL004_DEVICE_OFFLINE) {
+  } else if (scenario === 'DEVICE_OFFLINE') {
     signalStatus = 'OFFLINE';
     lampState = streetlight.expectedLampState;
     voltage = randomVariation(230, 5);
     current = lampState === 'ON' ? randomVariation(0.5, 0.05) : 0;
-  } else if (isSL005 && faultMode.SL005_LOW_CURRENT) {
+  } else if (scenario === 'LOW_CURRENT') {
     lampState = 'ON';
     signalStatus = 'ONLINE';
     voltage = randomVariation(230, 5);
@@ -156,12 +163,13 @@ const startSimulation = () => {
   console.log(`Interval: ${TELEMETRY_INTERVAL_MS}ms`);
   console.log('Streetlights:', STREETLIGHTS.map((s) => s.streetlightId).join(', '));
   console.log('\nAvailable fault simulations:');
-  console.log('  - Type "SL003_OFF" to simulate SL-003 lamp failure (lamp OFF)');
-  console.log('  - Type "SL004_OFFLINE" to simulate SL-004 device offline');
-  console.log('  - Type "SL005_LOW_CURRENT" to simulate SL-005 low current');
-  console.log('  - Type "RESET" to clear all fault modes');
+  console.log('  - Type "SL-001:LAMP_FAILURE" to simulate lamp failure');
+  console.log('  - Type "SL-002:DEVICE_OFFLINE" to simulate device offline');
+  console.log('  - Type "SL-003:LOW_CURRENT" to simulate low current');
+  console.log('  - Type "RESET" to clear all scenarios');
   console.log('  - Type "STOP" to stop the simulator');
   console.log('  - Type "START" to resume the simulator');
+  console.log('  - Type "EXIT" to quit');
   console.log('');
 
   const intervalId = setInterval(runSimulationCycle, TELEMETRY_INTERVAL_MS);
@@ -179,20 +187,9 @@ const startSimulation = () => {
     rl.question('simulator> ', (input) => {
       const command = input.trim().toUpperCase();
 
-      if (command === 'SL003_OFF') {
-        faultMode.SL003_LAMP_OFF = !faultMode.SL003_LAMP_OFF;
-        console.log(`SL-003 lamp fault simulation: ${faultMode.SL003_LAMP_OFF ? 'ENABLED' : 'DISABLED'}`);
-      } else if (command === 'SL004_OFFLINE') {
-        faultMode.SL004_DEVICE_OFFLINE = !faultMode.SL004_DEVICE_OFFLINE;
-        console.log(`SL-004 device offline simulation: ${faultMode.SL004_DEVICE_OFFLINE ? 'ENABLED' : 'DISABLED'}`);
-      } else if (command === 'SL005_LOW_CURRENT') {
-        faultMode.SL005_LOW_CURRENT = !faultMode.SL005_LOW_CURRENT;
-        console.log(`SL-005 low current simulation: ${faultMode.SL005_LOW_CURRENT ? 'ENABLED' : 'DISABLED'}`);
-      } else if (command === 'RESET') {
-        faultMode.SL003_LAMP_OFF = false;
-        faultMode.SL004_DEVICE_OFFLINE = false;
-        faultMode.SL005_LOW_CURRENT = false;
-        console.log('All fault modes cleared');
+      if (command === 'RESET') {
+        streetlightScenarios = {};
+        console.log('All scenarios cleared');
       } else if (command === 'STOP') {
         simulationActive = false;
         console.log('Simulator paused');
@@ -205,8 +202,18 @@ const startSimulation = () => {
         rl.close();
         console.log('Simulator stopped');
         process.exit(0);
+      } else if (command.includes(':')) {
+        const [streetlightId, scenarioType] = command.split(':');
+        const current = streetlightScenarios[streetlightId];
+        if (current === scenarioType) {
+          streetlightScenarios[streetlightId] = null;
+          console.log(`${streetlightId} ${scenarioType} simulation: DISABLED`);
+        } else {
+          streetlightScenarios[streetlightId] = scenarioType;
+          console.log(`${streetlightId} ${scenarioType} simulation: ENABLED`);
+        }
       } else if (command) {
-        console.log('Unknown command. Available: SL003_OFF, SL004_OFFLINE, SL005_LOW_CURRENT, RESET, STOP, START, EXIT');
+        console.log('Unknown command. Available: SL-001:LAMP_FAILURE, SL-002:DEVICE_OFFLINE, SL-003:LOW_CURRENT, RESET, STOP, START, EXIT');
       }
 
       prompt();
@@ -231,5 +238,5 @@ module.exports = {
   sendTelemetry,
   runSimulationCycle,
   startSimulation,
-  faultMode
+  streetlightScenarios
 };

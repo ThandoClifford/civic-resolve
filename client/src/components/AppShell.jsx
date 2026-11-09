@@ -21,7 +21,6 @@ const ROLE_NAV = {
     { to: '/streetlights', label: 'Streetlights', icon: '◉' },
     { to: '/faults', label: 'Faults', icon: '⚠' },
     { to: '/maintenance', label: 'Maintenance', icon: '✓' },
-    { to: '/simulator', label: 'Simulator', icon: '⟳' },
     { to: '/settings', label: 'Settings', icon: '⚙' }
   ]
 };
@@ -60,6 +59,19 @@ const AppShell = ({ children }) => {
             </NavLink>
           ))}
         </nav>
+
+        {user?.role === 'ADMIN' && (
+          <div className="sidebar-bottom-action">
+            <NavLink
+              to="/simulator"
+              className={({ isActive }) => `nav-link nav-link-simulator ${isActive ? 'active' : ''}`}
+              title="Simulator"
+            >
+              <span className="nav-icon">⟳</span>
+              <span>Simulator</span>
+            </NavLink>
+          </div>
+        )}
 
         <div className="sidebar-footer">
           <div className="user-card">

@@ -40,6 +40,7 @@ export const getFaults = (params) => api.get('/faults', { params });
 export const updateFaultStatus = (id, data) => api.patch(`/faults/${id}/status`, data);
 
 export const setDemoMode = (mode) => api.post('/demo/mode', { mode });
-export const setDemoScenario = (scenario) => api.post('/demo/scenario', { scenario });
+export const setDemoScenario = (scenario, type) => api.post('/demo/scenario', { scenario, type });
+export const getDemoState = () => api.get('/demo/state');
 
 export default api;

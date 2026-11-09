@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getStreetlights } from '../services/api';
+import { getStreetlights, getFaults } from '../services/api';
+import { getStreetlightDisplayInfo } from '../utils/streetlightColors';
 
 const Streetlights = () => {
   const [streetlights, setStreetlights] = useState([]);
+  const [faults, setFaults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchStreetlights = async () => {
       try {
-        const response = await getStreetlights();
-        setStreetlights(response.data.streetlights || []);
+        const [slRes, faultRes] = await Promise.all([
+          getStreetlights(),
+          getFaults()
+        ]);
+        setStreetlights(slRes.data.streetlights || []);
+        setFaults(faultRes.data.faults || []);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load streetlights');
       } finally {
@@ -92,7 +98,7 @@ const Streetlights = () => {
                   <td>{sl.current ?? '--'}A</td>
                   <td>{sl.voltage ?? '--'}V</td>
                   <td>{sl.deviceStatus === 'ONLINE' ? 'ONLINE' : sl.deviceStatus}</td>
-                  <td><span className={`status-pill status-${sl.deviceStatus}`}>{sl.deviceStatus || 'UNKNOWN'}</span></td>
+                  <td>{(() => { const display = getStreetlightDisplayInfo(sl); return <span className="status-pill" style={{ background: display.color }}>{display.label}</span>; })()}</td>
                   <td>{sl.lastSeen ? new Date(sl.lastSeen).toLocaleString() : 'Never'}</td>
                   <td><button className="btn btn-primary btn-small">Inspect</button></td>
                 </tr>

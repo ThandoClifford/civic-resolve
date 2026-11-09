@@ -3,27 +3,29 @@ const Streetlight = require('../models/Streetlight');
 const demoState = {
   operatingMode: 'NIGHT',
   simulatorRunning: true,
-  activeScenarios: {
-    SL003_OFF: false,
-    SL004_OFFLINE: false,
-    SL005_LOW_CURRENT: false
+  scenarios: {
+    'SL-001': null,
+    'SL-002': null,
+    'SL-003': null,
+    'SL-004': null,
+    'SL-005': null
   }
 };
 
 const supportedModes = new Set(['DAY', 'NIGHT']);
-const supportedScenarios = new Set([
-  'SL003_OFF',
-  'SL004_OFFLINE',
-  'SL005_LOW_CURRENT',
-  'RESET',
-  'START',
-  'STOP'
-]);
+const supportedScenarioTypes = new Set(['LAMP_FAILURE', 'DEVICE_OFFLINE', 'LOW_CURRENT', 'NORMAL']);
+const globalCommands = new Set(['RESET', 'START', 'STOP']);
+const supportedScenarios = new Set([...supportedScenarioTypes, ...globalCommands]);
+const legacyScenarioMap = {
+  SL003_OFF: 'SL-003',
+  SL004_OFFLINE: 'SL-004',
+  SL005_LOW_CURRENT: 'SL-005'
+};
 
 const cloneState = () => ({
   operatingMode: demoState.operatingMode,
   simulatorRunning: demoState.simulatorRunning,
-  activeScenarios: { ...demoState.activeScenarios }
+  scenarios: { ...demoState.scenarios }
 });
 
 const getState = () => cloneState();
@@ -53,48 +55,85 @@ const setMode = async (mode) => {
   };
 };
 
-const applyScenario = async (scenario) => {
-  const normalized = String(scenario || '').toUpperCase();
-  if (!supportedScenarios.has(normalized)) {
-    throw new Error('Unsupported scenario');
+const normalizeScenario = (input) => {
+  const normalized = String(input || '').toUpperCase();
+
+  if (globalCommands.has(normalized)) {
+    return normalized;
   }
 
-  if (normalized === 'RESET') {
-    demoState.activeScenarios = {
-      SL003_OFF: false,
-      SL004_OFFLINE: false,
-      SL005_LOW_CURRENT: false
-    };
-    demoState.simulatorRunning = true;
-    return {
-      success: true,
-      scenario: normalized,
-      state: getState()
-    };
+  if (legacyScenarioMap[normalized]) {
+    return { streetlightId: legacyScenarioMap[normalized], type: 'LAMP_FAILURE' };
   }
 
-  if (normalized === 'START') {
-    demoState.simulatorRunning = true;
-    return {
-      success: true,
-      scenario: normalized,
-      state: getState()
-    };
+  const parts = normalized.split(':');
+  if (parts.length === 2) {
+    const [streetlightId, type] = parts;
+    if (!supportedScenarioTypes.has(type)) {
+      throw new Error('Unsupported scenario type');
+    }
+    return { streetlightId, type };
   }
 
-  if (normalized === 'STOP') {
-    demoState.simulatorRunning = false;
-    return {
-      success: true,
-      scenario: normalized,
-      state: getState()
-    };
+  if (supportedScenarioTypes.has(normalized)) {
+    return { streetlightId: null, type: normalized };
   }
 
-  demoState.activeScenarios[normalized] = true;
+  throw new Error('Unsupported scenario');
+};
+
+const applyScenario = async (input) => {
+  const parsed = normalizeScenario(input);
+
+  if (typeof parsed === 'string') {
+    if (parsed === 'RESET') {
+      for (const id of Object.keys(demoState.scenarios)) {
+        demoState.scenarios[id] = null;
+      }
+      demoState.simulatorRunning = true;
+      return {
+        success: true,
+        scenario: parsed,
+        state: getState()
+      };
+    }
+
+    if (parsed === 'START') {
+      demoState.simulatorRunning = true;
+      return {
+        success: true,
+        scenario: parsed,
+        state: getState()
+      };
+    }
+
+    if (parsed === 'STOP') {
+      demoState.simulatorRunning = false;
+      return {
+        success: true,
+        scenario: parsed,
+        state: getState()
+      };
+    }
+  }
+
+  const { streetlightId, type } = parsed;
+
+  if (streetlightId && !demoState.scenarios.hasOwnProperty(streetlightId)) {
+    throw new Error('Unknown streetlight ID');
+  }
+
+  if (type === 'NORMAL') {
+    const targetId = streetlightId || Object.keys(demoState.scenarios)[0];
+    demoState.scenarios[targetId] = null;
+  } else {
+    const targetId = streetlightId || Object.keys(demoState.scenarios)[0];
+    demoState.scenarios[targetId] = type;
+  }
+
   return {
     success: true,
-    scenario: normalized,
+    scenario: streetlightId ? `${streetlightId}:${type}` : type,
     state: getState()
   };
 };

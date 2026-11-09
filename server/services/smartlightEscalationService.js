@@ -49,6 +49,55 @@ const scheduleEscalation = async (fault) => {
   }
 
   if (fault.escalationStatus === ESCALATION_STATUS_PENDING) {
+    // Recovery path: recreate timer using remaining time from escalationScheduledAt
+    if (fault.escalationScheduledAt) {
+      const scheduledAt = new Date(fault.escalationScheduledAt).getTime();
+      const remaining = scheduledAt - Date.now();
+
+      if (remaining <= 0) {
+        const latest = await Fault.findById(fault._id);
+        if (!latest) return null;
+        if (
+          latest.priorityLevel === 'CRITICAL' &&
+          latest.status === 'DETECTED' &&
+          latest.escalationStatus === ESCALATION_STATUS_PENDING
+        ) {
+          latest.escalationStatus = ESCALATION_STATUS_ESCALATED;
+          latest.escalatedAt = new Date();
+          await latest.save();
+          await emitEscalation(latest);
+        }
+        return latest;
+      }
+
+      const timer = setTimeout(async () => {
+        timers.delete(fault._id.toString());
+
+        const latest = await Fault.findById(fault._id);
+        if (!latest) {
+          return;
+        }
+
+        if (
+          latest.priorityLevel === 'CRITICAL' &&
+          latest.status === 'DETECTED' &&
+          latest.escalationStatus === ESCALATION_STATUS_PENDING
+        ) {
+          latest.escalationStatus = ESCALATION_STATUS_ESCALATED;
+          latest.escalatedAt = new Date();
+          await latest.save();
+          await emitEscalation(latest);
+        }
+      }, remaining);
+
+      timers.set(fault._id.toString(), timer);
+      return fault;
+    }
+
+    // PENDING without a scheduled time is invalid state; clear it
+    fault.escalationStatus = 'NONE';
+    fault.escalationScheduledAt = null;
+    await fault.save();
     return null;
   }
 
@@ -67,13 +116,11 @@ const scheduleEscalation = async (fault) => {
     if (
       latest.priorityLevel === 'CRITICAL' &&
       latest.status === 'DETECTED' &&
-      ['DETECTED', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS'].includes(latest.status) &&
       latest.escalationStatus === ESCALATION_STATUS_PENDING
     ) {
       latest.escalationStatus = ESCALATION_STATUS_ESCALATED;
       latest.escalatedAt = new Date();
       await latest.save();
-
       await emitEscalation(latest);
     }
   }, ESCALATION_DELAY_MS);
