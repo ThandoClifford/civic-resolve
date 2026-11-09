@@ -40,7 +40,9 @@ export const getFaults = (params) => api.get('/faults', { params });
 export const updateFaultStatus = (id, data) => api.patch(`/faults/${id}/status`, data);
 
 export const setDemoMode = (mode) => api.post('/demo/mode', { mode });
-export const setDemoScenario = (scenario, type) => api.post('/demo/scenario', { scenario, type });
+export const setDemoScenario = (scenario, type) => api.post('/demo/scenario', { scenario, type }, {
+  headers: { 'x-device-api-key': import.meta.env.VITE_DEVICE_API_KEY || '' }
+});
 export const getDemoState = () => api.get('/demo/state');
 
 export default api;

@@ -33,7 +33,7 @@ router.post('/mode', requireAuth, requireRole('ADMIN'), async (req, res) => {
   }
 });
 
-router.post('/scenario', requireAuth, requireRole('ADMIN'), async (req, res) => {
+router.post('/scenario', authenticateDemoState, async (req, res) => {
   try {
     const { scenario, type } = req.body;
     const input = type ? `${scenario}:${type}` : scenario;

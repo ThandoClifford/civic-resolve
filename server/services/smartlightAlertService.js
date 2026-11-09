@@ -1,5 +1,6 @@
 const Fault = require('../models/Fault');
 const { getIO } = require('./socketService');
+const { sendSmartLightAlertEmail } = require('./emailService');
 
 const ALERTABLE_PRIORITY_LEVELS = new Set(['HIGH', 'CRITICAL']);
 
@@ -56,12 +57,20 @@ const checkAndEmitAlert = async (fault, previousPriorityLevel) => {
   };
 
    try {
-     const io = getIO();
-     io.emit('smartlight:alert', payload);
-     console.log(`[Socket] Emitted smartlight:alert for ${populated.streetlightId}`);
-   } catch (error) {
-     console.error('Socket alert emit error:', error);
-   }
+      const io = getIO();
+      io.emit('smartlight:alert', payload);
+      console.log(`[Socket] Emitted smartlight:alert for ${populated.streetlightId}`);
+    } catch (error) {
+      console.error('Socket alert emit error:', error);
+    }
+
+    try {
+      sendSmartLightAlertEmail(payload).catch((error) => {
+        console.error('Failed to send SmartLight alert email:', error.message);
+      });
+    } catch (error) {
+      console.error('Failed to send SmartLight alert email:', error.message);
+    }
 
   if (currentLevel === 'CRITICAL') {
     const { scheduleEscalation } = require('./smartlightEscalationService');

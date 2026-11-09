@@ -54,6 +54,8 @@ mongoose
     initializeSocket(server);
     const { recoverPendingEscalations } = require('./services/smartlightEscalationService');
     recoverPendingEscalations();
+    const { startTelemetryGeneration } = require('./services/demoStateService');
+    startTelemetryGeneration();
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
