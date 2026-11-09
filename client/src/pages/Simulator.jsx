@@ -116,7 +116,7 @@ const Simulator = () => {
   const handleResetStreetlight = async (streetlightId) => {
     setLoading(true);
     try {
-      await setDemoScenario(streetlightId, 'reset');
+      await setDemoScenario(streetlightId, 'NORMAL');
       setActiveScenarios((prev) => {
         const next = { ...prev };
         delete next[streetlightId];
